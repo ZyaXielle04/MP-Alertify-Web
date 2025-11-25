@@ -6,11 +6,17 @@ import json
 
 app = Flask(__name__)
 
-# Initialize Firebase Admin with JSON from environment variable for security
+# Initialize Firebase Admin
 cred_json = os.environ.get("FIREBASE_ADMIN_JSON")
 cred = credentials.Certificate(json.loads(cred_json))
 firebase_admin.initialize_app(cred)
 
+# ---------- ROOT ROUTE ----------
+@app.route("/")
+def home():
+    return jsonify({"message": "Flask + Firebase Admin running!"})
+
+# ---------- DISABLE / ENABLE USER ----------
 @app.route("/disable_user", methods=["POST"])
 def disable_user():
     data = request.json
@@ -21,9 +27,7 @@ def disable_user():
         return jsonify({"success": False, "error": "Missing uid or disable field"}), 400
 
     try:
-        # Update Firebase Auth
         auth.update_user(uid, disabled=disable)
-        # Optional: update Realtime Database record
         from firebase_admin import db
         db.reference(f"users/{uid}/disabled").set(disable)
 
@@ -33,4 +37,5 @@ def disable_user():
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
