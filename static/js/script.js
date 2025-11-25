@@ -116,10 +116,10 @@ loginForm.addEventListener("submit", (e) => {
             // Check email verification + admin approval
             if (!user.emailVerified || !isApproved) {
               // Redirect to pending page
-              window.location.href = "/pending.html";
+              window.location.href = "/pending";
             } else {
               // Redirect to admin dashboard
-              window.location.href = "/admin/dashboard.html";
+              window.location.href = "/admin/dashboard";
             }
 
             modal.style.display = "none";
