@@ -121,7 +121,7 @@ window.addEventListener("DOMContentLoaded", () => {
             if (result.isConfirmed) {
               try {
                 // Call your Python backend
-                const res = await fetch("https://your-render-server/disable_user", {
+                const res = await fetch("https://mp-alertify-web.onrender.com/disable_user", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ uid: uid, disable: !user.disabled })
