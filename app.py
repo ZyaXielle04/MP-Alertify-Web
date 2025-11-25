@@ -37,6 +37,20 @@ def admin_dashboard():
     return render_template("admin/dashboard.html")
 
 # ---------------------------
+# ADMIN - USER MANAGEMENT ROUTE
+# ---------------------------
+@app.route("/admin/users")
+def manage_users():
+    return render_template("admin/users.html")
+
+# ---------------------------
+# ADMIN - REPORTS MANAGEMENT ROUTE
+# ---------------------------
+@app.route("/admin/reports")
+def view_reports():
+    return render_template("admin/reports.html")
+
+# ---------------------------
 # DISABLE / ENABLE USER
 # ---------------------------
 @app.route("/disable_user", methods=["POST"])
