@@ -1,0 +1,287 @@
+/* USERS PAGE SPECIFIC STYLES */
+
+#usersContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.user-card {
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.user-card:hover {
+  transform: translateY(-3px);
+}
+
+.user-card h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: #d11a2a;
+}
+
+.user-card p {
+  font-size: 14px;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+/* Table fallback for wider screens */
+@media(min-width:900px) {
+  #usersContainer table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #usersContainer th, #usersContainer td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+  }
+
+  #usersContainer th {
+    background: #d11a2a;
+    color: #fff;
+  }
+}
+
+/* User card extra details */
+.user-details {
+  display: none;
+  margin-top: 10px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+}
+
+.user-details p {
+  font-size: 14px;
+  margin: 3px 0;
+}
+
+.user-details img {
+  max-width: 100px;
+  margin: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* Buttons inside cards */
+.card-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #d11a2a;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+
+.card-btn:hover {
+  background-color: #b01524;
+}
+
+/* ---------------------------------------------
+   OVERALL POPUP CONTAINER – Glass + Depth
+---------------------------------------------- */
+.user-details-popup {
+  height: 80vh !important;
+  max-height: 80vh !important;
+  background: rgba(255, 255, 255, 0.80) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+
+  border-radius: 22px !important;
+  padding: 0 !important;
+
+  /* Premium glowing border */
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+
+  /* Soft elevated shadow */
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.18),
+    0 8px 20px rgba(0, 0, 0, 0.08);
+
+  animation: popupFadeIn 0.28s ease-out;
+}
+
+/* Popup fade + slight rise animation */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------------------------------------------
+   HEADER TITLE – Elegant top accent bar
+---------------------------------------------- */
+.swal2-title {
+  font-family: "Poppins", sans-serif !important;
+  font-size: 23px !important;
+  font-weight: 600 !important;
+  margin-bottom: 10px !important;
+
+  color: #222 !important;
+  padding: 18px 0 10px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+  /* Subtle glow */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+
+/* ---------------------------------------------
+   SCROLLABLE CONTENT AREA
+---------------------------------------------- */
+.user-details-html {
+  max-height: 68vh !important;
+  overflow-y: auto !important;
+
+  padding: 25px 34px !important;
+  scrollbar-width: thin;
+  scrollbar-color: #aaa transparent;
+
+  /* Smooth fade-in */
+  animation: fadeContent 0.25s ease-in;
+}
+
+@keyframes fadeContent {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Custom scrollbars */
+.user-details-html::-webkit-scrollbar {
+  width: 7px;
+}
+
+.user-details-html::-webkit-scrollbar-thumb {
+  background: rgba(110, 110, 110, 0.65);
+  border-radius: 12px;
+}
+
+.user-details-html::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 90, 90, 0.85);
+}
+
+.user-details-html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------
+   CONTENT WRAPPER
+---------------------------------------------- */
+.details-wrapper {
+  font-family: "Poppins", sans-serif;
+  color: #333;
+  font-size: 15.5px;
+  line-height: 1.58;
+  letter-spacing: 0.2px;
+}
+
+/* ---------------------------------------------
+   DETAIL TEXT BLOCKS
+---------------------------------------------- */
+.detail-group p {
+  margin: 6px 0;
+  font-weight: 500;
+  transition: 0.25s ease;
+}
+
+.detail-group p:hover {
+  transform: translateX(4px);
+  color: #222;
+}
+
+.details-wrapper hr {
+  margin: 22px 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, #ccc, #fff);
+}
+
+/* ---------------------------------------------
+   IMAGES – Elevated + Hover Glow
+---------------------------------------------- */
+.image-group p {
+  font-weight: 600;
+  margin: 12px 0 10px;
+  color: #444;
+}
+
+.swal-img {
+  width: 60%;
+  border-radius: 14px;
+  margin-bottom: 22px;
+
+  box-shadow:
+    0 7px 20px rgba(0, 0, 0, 0.15),
+    0 3px 8px rgba(0, 0, 0, 0.05);
+
+  transition: 0.33s ease;
+  cursor: zoom-in;
+}
+
+.swal-img:hover {
+  transform: scale(1.5);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------------------------------------------
+   BUTTON STYLING – Soft Glow + Press Effects
+---------------------------------------------- */
+.swal2-confirm,
+.swal2-cancel {
+  border-radius: 12px !important;
+  padding: 11px 26px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+
+  transition: 0.22s ease-out !important;
+  transform: translateY(0);
+}
+
+.swal2-confirm:active,
+.swal2-cancel:active {
+  transform: translateY(2px);
+}
+
+/* Approve button */
+.swal2-confirm {
+  background: linear-gradient(135deg, #3fbf4c, #33a341) !important;
+  box-shadow: 0 5px 12px rgba(63, 191, 76, 0.3) !important;
+}
+
+.swal2-confirm:hover {
+  background: linear-gradient(135deg, #36a343, #2f8f39) !important;
+}
+
+/* Close button */
+.swal2-cancel {
+  background: linear-gradient(135deg, #e2e2e2, #d1d1d1) !important;
+  color: #333 !important;
+  box-shadow: 0 5px 10px rgba(0,0,0,0.15) !important;
+}
+
+.swal2-cancel:hover {
+  background: linear-gradient(135deg, #d9d9d9, #c8c8c8) !important;
+}
+
+/* ---------------------------------------------
+   BACKDROP – Frosted Dim Effect
+---------------------------------------------- */
+.swal2-backdrop-show {
+  backdrop-filter: blur(6px) brightness(0.92);
+  background: rgba(0, 0, 0, 0.35) !important;
+}
