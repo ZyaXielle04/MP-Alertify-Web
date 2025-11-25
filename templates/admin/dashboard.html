@@ -6,8 +6,8 @@
   <title>Admin Dashboard – MP-Alertify</title>
 
   <!-- Base Styles -->
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="{{ url_for('template', filename='admin/css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('template', filename='admin/css/dashboard.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
   <!-- Firebase SDKs -->
@@ -71,9 +71,9 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="/firebase-config.js"></script>
-  <script src="js/base.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+  <script src="{{ url_for('static', filename='admin/js/base.js') }}"></script>
+  <script src="{{ url_for('static', filename='admin/js/dashboard.js') }}"></script>
 
 </body>
 </html>
