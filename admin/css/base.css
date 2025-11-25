@@ -1,0 +1,195 @@
+/* -----------------------------------------
+   RESET & GLOBAL
+------------------------------------------ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background: #f4f4f4;
+  color: #333;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* -----------------------------------------
+   HEADER (TOP BAR)
+------------------------------------------ */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: #d11a2a;
+  color: #fff;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 0 20px;
+  z-index: 900;
+
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+header h1 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.hamburger {
+  font-size: 26px;
+  cursor: pointer;
+  display: none; /* visible only on mobile */
+}
+
+/* -----------------------------------------
+   SIDE NAVIGATION
+------------------------------------------ */
+.side-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 230px;
+  height: 100vh;
+
+  background: #242424;
+  padding-top: 70px; /* align below header */
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+
+  z-index: 800;
+  transition: transform 0.3s ease;
+}
+
+.nav-separator {
+  width: 80%;
+  height: 1px;
+  background: #444;
+  margin: 10px 0;
+}
+
+/* Logo area */
+.nav-logo {
+  text-align: center;
+  padding: 25px 0 15px;
+}
+
+.nav-logo img {
+  width: 85px;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.nav-logo h2 {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Links */
+.side-nav a {
+  width: 100%;
+  color: #fff;
+  text-decoration: none;
+
+  padding: 14px 20px;
+  font-size: 16px;
+
+  transition: background 0.2s;
+}
+
+.side-nav a.active {
+  background: #b01524;
+}
+
+.side-nav a:hover {
+  background: #d11a2a;
+}
+
+/* Mobile: nav hidden */
+.side-nav.closed {
+  transform: translateX(-100%);
+}
+
+/* -----------------------------------------
+   MAIN CONTENT AREA
+------------------------------------------ */
+.main {
+  margin-left: 230px; /* space for sidebar */
+  padding: 90px 30px 30px; /* 90px = space for header */
+  min-height: calc(100vh - 70px - 60px); 
+  /* full height minus header & footer */
+  transition: margin-left 0.3s ease;
+}
+
+.main.expanded {
+  margin-left: 0;
+}
+
+/* -----------------------------------------
+   WELCOME SECTION
+------------------------------------------ */
+.dashboard-welcome {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.dashboard-welcome h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+/* -----------------------------------------
+   FIXED FOOTER
+------------------------------------------ */
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+
+  width: 100%;
+  height: 60px;
+
+  background: #ffffff;
+  color: #555;
+  font-size: 14px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  box-shadow: 0 -3px 10px rgba(0,0,0,0.1);
+  z-index: 901;
+}
+
+/* -----------------------------------------
+   RESPONSIVENESS
+------------------------------------------ */
+@media (max-width: 900px) {
+
+  .hamburger {
+    display: block;
+  }
+
+  .side-nav {
+    transform: translateX(-100%);
+  }
+
+  .main {
+    margin-left: 0;
+    padding: 90px 20px 30px;
+  }
+}

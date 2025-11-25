@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard – MP-Alertify</title>
+
+  <!-- Base Styles -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+
+  <!-- Header (top bar) -->
+  <header>
+    <h1>MP Alertify - Admin Dashboard</h1>
+    <div class="hamburger" id="hamburger">☰</div>
+  </header>
+
+  <!-- SIDE NAV (fixed left) -->
+  <nav class="side-nav" id="sideNav">
+
+    <!-- LOGO AREA -->
+    <div class="nav-logo">
+      <img src="/assets/logo.png" alt="MP Alertify Logo">
+      <h2>MP Alertify</h2>
+    </div>
+
+    <span class="nav-separator"></span>
+
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="users.html">Manage Users</a>
+    <a href="reports.html">Reports</a>
+    <a href="#" id="logoutBtn">Logout</a>
+  </nav>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="main">
+    <section class="dashboard-welcome">
+      <h2>Welcome, Admin!</h2>
+      <p>Use the side navigation to manage users, view reports, and monitor the system.</p>
+    </section>
+
+    <section class="dashboard-cards">
+      <div class="card">
+        <h3>Total Users</h3>
+        <p id="totalUsers">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Pending Approvals</h3>
+        <p id="pendingUsers">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Active Reports</h3>
+        <p id="activeReports">0</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © 2025 MP-Alertify. All Rights Reserved.
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/firebase-config.js"></script>
+  <script src="js/base.js"></script>
+  <script src="js/dashboard.js"></script>
+
+</body>
+</html>

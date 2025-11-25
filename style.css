@@ -1,7 +1,7 @@
 :root {
   --primary: #d11a2a;
   --primary-dark: #a31321;
-  --light: #ffffff;
+  --light: whitesmoke;
   --dark: #333333;
 
   /* Fluid text sizes */
@@ -57,7 +57,7 @@ nav a:hover {
   opacity: 0.7;
 }
 
-/* Make nav wrap on tiny phones */
+/* Small screens */
 @media (max-width: 480px) {
   nav {
     width: 100%;
@@ -70,29 +70,55 @@ nav a:hover {
 /* ---------- MAIN ---------- */
 main {
   flex: 1;
-  padding-bottom: 80px; /* space for footer */
+  padding-bottom: 80px;
 }
 
-/* ---------- HERO ---------- */
+/* ---------- HERO (Smooth Slideshow) ---------- */
 .hero {
+  position: relative;
   text-align: center;
   padding: clamp(2rem, 5vw, 5rem) 2rem;
-  background: linear-gradient(rgba(209, 26, 42, 0.85), rgba(209, 26, 42, 0.85)),
-    url('https://images.unsplash.com/photo-1581090464472-8eec4e41de63?auto=format&fit=crop&w=1600&q=80');
-  background-size: cover;
-  background-position: center;
   color: var(--light);
+  overflow: hidden;
 }
 
+.hero .slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: smoothSlideshow 24s infinite;
+  z-index: -1;
+  transition: opacity 1s linear;
+}
+
+/* Different delays for each slide for continuous rotation */
+.hero .slide:nth-child(1) { animation-delay: 0s; }
+.hero .slide:nth-child(2) { animation-delay: 6s; }
+.hero .slide:nth-child(3) { animation-delay: 12s; }
+.hero .slide:nth-child(4) { animation-delay: 18s; }
+
+/* Keyframes for smooth opacity fade-in/fade-out */
+@keyframes smoothSlideshow {
+  0%, 20%   { opacity: 1; }
+  25%, 95%  { opacity: 0; }
+  100%      { opacity: 0; }
+}
+
+/* Hero Text */
 .hero h2 {
   font-size: var(--fs-h2);
   margin-bottom: 1rem;
+  color: var(--dark);
 }
 
 .hero p {
   font-size: var(--fs-body);
   max-width: 650px;
   margin: auto;
+  color: var(--dark);
 }
 
 .btn {
@@ -104,7 +130,7 @@ main {
   border-radius: 6px;
   font-weight: 600;
   text-decoration: none;
-  transition: 0.2s ease;
+  transition: 0.3s ease;
   font-size: var(--fs-body);
 }
 
@@ -174,11 +200,11 @@ footer {
   color: var(--light);
 }
 
-/* ---------- SIDE NAV (HIDDEN BY DEFAULT) ---------- */
+/* ---------- SIDE NAV ---------- */
 .side-nav {
   position: fixed;
   top: 0;
-  right: -250px; /* hidden */
+  right: -250px;
   width: 250px;
   height: 100%;
   background: var(--primary-dark);
@@ -198,7 +224,6 @@ footer {
   font-weight: 500;
 }
 
-/* When menu is open */
 .side-nav.active {
   right: 0;
 }
@@ -216,7 +241,7 @@ footer {
   display: block;
 }
 
-/* ---------- RESPONSIVE RULES ---------- */
+/* ---------- RESPONSIVE ---------- */
 @media (max-width: 550px) {
   .top-nav {
     display: none;
@@ -225,4 +250,78 @@ footer {
   .hamburger {
     display: block;
   }
+}
+
+/* ---------- LOGIN MODAL ---------- */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 3000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: var(--light);
+  margin: auto;
+  padding: 2rem;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 0.8rem;
+  margin: 0.5rem 0 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.modal-content .btn {
+  width: 100%;
+}
+
+/* Close button */
+.close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--dark);
+}
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  flex: 1;
+  padding-right: 35px; /* space for the icon */
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-60%);
+  cursor: pointer;
+  user-select: none;
 }
