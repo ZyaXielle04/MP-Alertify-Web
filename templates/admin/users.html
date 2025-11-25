@@ -6,9 +6,9 @@
   <title>MP-Alertify – Users Management</title>
 
   <!-- Base Styles -->
-  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
   <!-- Users Page Styles -->
-  <link rel="stylesheet" href="css/users.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/users.css') }}">
 
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
@@ -33,7 +33,7 @@
 
     <!-- LOGO AREA -->
     <div class="nav-logo">
-      <img src="/assets/logo.png" alt="MP Alertify Logo">
+      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="MP Alertify Logo">
       <h2>MP Alertify</h2>
     </div>
 
@@ -64,8 +64,8 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="/firebase-config.js"></script>
-  <script src="js/base.js"></script>
-  <script src="js/users.js"></script>
+  <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/users.js') }}"></script>
 </body>
 </html>
