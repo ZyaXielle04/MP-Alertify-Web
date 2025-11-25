@@ -9,8 +9,8 @@ import json
 # ---------------------------
 app = Flask(
     __name__,
-    template_folder="templates",  # where index.html lives
-    static_folder="static"        # where css/js/images live
+    template_folder="templates",  # HTML templates live here
+    static_folder="static"        # CSS/JS/images live here
 )
 
 # ---------------------------
@@ -19,7 +19,7 @@ app = Flask(
 cred_json = os.environ.get("FIREBASE_ADMIN_JSON")
 cred = credentials.Certificate(json.loads(cred_json))
 firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://mp-alertify-default-rtdb.asia-southeast1.firebasedatabase.app/"  # replace with your RTDB URL
+    "databaseURL": "https://mp-alertify-default-rtdb.asia-southeast1.firebasedatabase.app/"
 })
 
 # ---------------------------
@@ -28,6 +28,13 @@ firebase_admin.initialize_app(cred, {
 @app.route("/")
 def home():
     return render_template("index.html")
+
+# ---------------------------
+# ADMIN DASHBOARD ROUTE
+# ---------------------------
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    return render_template("admin/dashboard.html")
 
 # ---------------------------
 # DISABLE / ENABLE USER
