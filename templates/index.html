@@ -4,14 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MP-Alertify – Emergency Response System</title>
+  <!-- CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
-  <!-- Firebase App (core SDK) -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app-compat.js"></script>
-  <!-- Firebase Auth -->
   <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth-compat.js"></script>
-  <!-- Firebase Realtime Database -->
   <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-database-compat.js"></script>
 </head>
 <body>
@@ -29,7 +28,7 @@
       <a href="#login" id="loginBtnMobile">Login</a>
     </nav>
 
-    <!-- Regular Navigation (desktop) -->
+    <!-- Top Navigation (desktop) -->
     <nav class="top-nav">
       <a href="#home">Home</a>
       <a href="#features">Features</a>
@@ -44,7 +43,6 @@
       <div class="slide" style="background-image: linear-gradient(rgba(209,26,42,0.85), rgba(209,26,42,0.85)), url(&quot;{{ url_for('static', filename='images/background_2.jpg') }}&quot;);"></div>
       <div class="slide" style="background-image: linear-gradient(rgba(209,26,42,0.85), rgba(209,26,42,0.85)), url(&quot;{{ url_for('static', filename='images/background_3.jpg') }}&quot;);"></div>
       <div class="slide" style="background-image: linear-gradient(rgba(209,26,42,0.85), rgba(209,26,42,0.85)), url(&quot;{{ url_for('static', filename='images/background_4.jpg') }}&quot;);"></div>
-
       <h2>Fast. Reliable. Life-Saving.</h2>
       <p>MP Alertify is a modern emergency response web application designed to connect citizens, responders, and authorities for rapid, coordinated action.</p>
       <a href="#features" class="btn">Explore Features</a>
@@ -92,8 +90,8 @@
     </div>
   </div>
 
+  <!-- JS -->
   <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-
 </body>
 </html>
