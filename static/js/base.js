@@ -14,7 +14,7 @@ window.addEventListener("DOMContentLoaded", () => {
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
       // Not logged in, redirect to login
-      window.location.href = "/index.html";
+      window.location.href = "/index";
       return;
     }
 
@@ -28,7 +28,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (role !== "admin") {
         alert("Access denied. Admins only.");
         await auth.signOut();
-        window.location.href = "/index.html";
+        window.location.href = "/index";
         return;
       }
 
@@ -41,7 +41,7 @@ window.addEventListener("DOMContentLoaded", () => {
       console.error("Error checking user role:", error);
       alert("Failed to verify user role. Logging out.");
       await auth.signOut();
-      window.location.href = "/index.html";
+      window.location.href = "/index";
     }
   });
 
@@ -53,7 +53,7 @@ window.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       try {
         await auth.signOut();
-        window.location.href = "/index.html";
+        window.location.href = "/index";
       } catch (error) {
         console.error("Logout failed:", error);
         alert("Logout failed: " + error.message);
