@@ -79,6 +79,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
+  gap: 8px;
   transition: background 0.2s ease;
 }
 
