@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const reportsTableBody = document.getElementById("reportsTableBody");
 
+    // ---------------------------
+    // Update Report Status
+    // ---------------------------
     async function updateStatus(reportId, newStatus) {
         try {
             await db.ref("reports/" + reportId).update({ status: newStatus });
@@ -10,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ---------------------------
+    // Status Badge
+    // ---------------------------
     function getStatusBadge(status) {
         const colors = {
             "pending": "#7f8c8d",      // gray
@@ -28,131 +34,146 @@ document.addEventListener("DOMContentLoaded", () => {
         ">${status}</span>`;
     }
 
+    // ---------------------------
+    // Fetch Reports
+    // ---------------------------
     function fetchReports() {
-      db.ref("reports").on("value", async (reportsSnap) => {
-          try {
-              const usersSnap = await db.ref("users").get();
+        db.ref("reports").on("value", async (reportsSnap) => {
+            try {
+                const usersSnap = await db.ref("users").get();
 
-              if (!reportsSnap.exists()) {
-                  reportsTableBody.innerHTML = `
-                      <tr><td colspan="8" style="text-align:center;">No reports found</td></tr>
-                  `;
-                  return;
-              }
+                if (!reportsSnap.exists()) {
+                    reportsTableBody.innerHTML = `
+                        <tr><td colspan="8" style="text-align:center;">No reports found</td></tr>
+                    `;
+                    return;
+                }
 
-              const reports = reportsSnap.val();
-              const users = usersSnap.exists() ? usersSnap.val() : {};
+                const reports = reportsSnap.val();
+                const users = usersSnap.exists() ? usersSnap.val() : {};
 
-              reportsTableBody.innerHTML = ""; // clear table
+                reportsTableBody.innerHTML = ""; // clear table
 
-              for (let id in reports) {
-                  const r = reports[id];
-                  const reporterId = r.reporter;
-                  const user = users[reporterId] || {};
+                for (let id in reports) {
+                    const r = reports[id];
+                    const reporterId = r.reporter;
+                    const user = users[reporterId] || {};
 
-                  // Name + Contact
-                  const name = user.name || "Unknown User";
-                  const contact = user.contact || "N/A";
+                    // Name + Contact
+                    const name = user.name || "Unknown User";
+                    const contact = user.contact || "N/A";
 
-                  // Emergency
-                  const emergency = r.emergency === "Others" ? r.otherEmergency : r.emergency;
+                    // Emergency
+                    const emergency = r.emergency === "Others" ? r.otherEmergency : r.emergency;
 
-                  // Organization
-                  const org = r.organization || "N/A";
+                    // Organization
+                    const org = r.organization || "N/A";
 
-                  // Description
-                  const description = r.additionalMessage || "No description";
+                    // Description
+                    const description = r.additionalMessage || "No description";
 
-                  // Image
-                  const imageHtml = r.imageUrl
-                      ? `<img src="${r.imageUrl}" alt="Attachment">`
-                      : `<span>No Image</span>`;
+                    // Image
+                    const imageHtml = r.imageUrl
+                        ? `<img src="${r.imageUrl}" alt="Attachment">`
+                        : `<span>No Image</span>`;
 
-                  // LOCATION HANDLING
-                  let displayLocation = "N/A";
+                    // ---------------------------
+                    // LOCATION HANDLING
+                    // ---------------------------
+                    let displayLocation = "N/A";
 
-                  if (r.locationType === "HomeAddress") {
-                      displayLocation = user.homeAddress || "No Home Address";
-                  } else if (r.locationType === "PresentAddress") {
-                      displayLocation = user.presentAddress || "No Present Address";
-                  } else if (
-                      r.locationType === "Current Location" ||
-                      r.locationType === "customLocation"
-                  ) {
-                      displayLocation = r.location || "Unknown Location";
-                  }
+                    if (r.locationType === "HomeAddress") {
+                        displayLocation = user.homeAddress || "No Home Address";
+                    } else if (r.locationType === "PresentAddress") {
+                        displayLocation = user.presentAddress || "No Present Address";
+                    } else if (r.locationType === "Current Location" || r.locationType === "customLocation") {
+                        let loc = r.location || "Unknown Location";
 
-                  // STATUS (logic below)
-                  let statusHtml = "";
+                        // Convert "Lat: 14.5872417, Lng: 120.9997754" -> clickable link
+                        const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
+                        if (match) {
+                            const lat = match[1];
+                            const lng = match[2];
+                            displayLocation = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>`;
+                        } else {
+                            displayLocation = loc; // fallback if not in Lat/Lng format
+                        }
+                    }
 
-                  switch (r.status) {
-                      case "pending":
-                          statusHtml = `
-                              ${getStatusBadge("pending")}
-                              <br>
-                              <button class="btn gray" data-action="reject" data-id="${id}">Reject</button>
-                              <button class="btn yellow" data-action="respond" data-id="${id}">Respond</button>
-                          `;
-                          break;
-                      case "Rejected":
-                          statusHtml = `${getStatusBadge("Rejected")}`;
-                          break;
-                      case "Respond":
-                          statusHtml = `
-                              ${getStatusBadge("Respond")}
-                              <br>
-                              <button class="btn blue" data-action="onroute" data-id="${id}">On Route</button>
-                          `;
-                          break;
-                      case "onRoute":
-                          statusHtml = `
-                              ${getStatusBadge("onRoute")}
-                              <br>
-                              <button class="btn green" data-action="responded" data-id="${id}">Responded</button>
-                          `;
-                          break;
-                      case "Responded":
-                          statusHtml = `${getStatusBadge("Responded")}`;
-                          break;
-                      default:
-                          statusHtml = `${getStatusBadge("pending")}`;
-                  }
+                    // ---------------------------
+                    // STATUS
+                    // ---------------------------
+                    let statusHtml = "";
+                    switch (r.status) {
+                        case "pending":
+                            statusHtml = `
+                                ${getStatusBadge("pending")}
+                                <br>
+                                <button class="btn gray" data-action="reject" data-id="${id}">Reject</button>
+                                <button class="btn yellow" data-action="respond" data-id="${id}">Respond</button>
+                            `;
+                            break;
+                        case "Rejected":
+                            statusHtml = `${getStatusBadge("Rejected")}`;
+                            break;
+                        case "Respond":
+                            statusHtml = `
+                                ${getStatusBadge("Respond")}
+                                <br>
+                                <button class="btn blue" data-action="onroute" data-id="${id}">On Route</button>
+                            `;
+                            break;
+                        case "onRoute":
+                            statusHtml = `
+                                ${getStatusBadge("onRoute")}
+                                <br>
+                                <button class="btn green" data-action="responded" data-id="${id}">Responded</button>
+                            `;
+                            break;
+                        case "Responded":
+                            statusHtml = `${getStatusBadge("Responded")}`;
+                            break;
+                        default:
+                            statusHtml = `${getStatusBadge("pending")}`;
+                    }
 
-                  // Append to table
-                  const row = `
-                      <tr>
-                          <td>${name}</td>
-                          <td>${emergency}</td>
-                          <td>${description}</td>
-                          <td>${org}</td>
-                          <td>${imageHtml}</td>
-                          <td>${contact}</td>
-                          <td>${displayLocation}</td>
-                          <td>${statusHtml}</td>
-                      </tr>
-                  `;
+                    // Append to table
+                    const row = `
+                        <tr>
+                            <td>${name}</td>
+                            <td>${emergency}</td>
+                            <td>${description}</td>
+                            <td>${org}</td>
+                            <td>${imageHtml}</td>
+                            <td>${contact}</td>
+                            <td>${displayLocation}</td>
+                            <td>${statusHtml}</td>
+                        </tr>
+                    `;
+                    reportsTableBody.insertAdjacentHTML("beforeend", row);
+                }
 
-                  reportsTableBody.insertAdjacentHTML("beforeend", row);
-              }
+                // ---------------------------
+                // BUTTON ACTION HANDLER
+                // ---------------------------
+                document.querySelectorAll(".btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const reportId = btn.dataset.id;
+                        const action = btn.dataset.action;
 
-              // BUTTON ACTION HANDLER
-              document.querySelectorAll(".btn").forEach(btn => {
-                  btn.addEventListener("click", () => {
-                      const reportId = btn.dataset.id;
-                      const action = btn.dataset.action;
+                        if (action === "reject") updateStatus(reportId, "Rejected");
+                        if (action === "respond") updateStatus(reportId, "Respond");
+                        if (action === "onroute") updateStatus(reportId, "onRoute");
+                        if (action === "responded") updateStatus(reportId, "Responded");
+                    });
+                });
 
-                      if (action === "reject") updateStatus(reportId, "Rejected");
-                      if (action === "respond") updateStatus(reportId, "Respond");
-                      if (action === "onroute") updateStatus(reportId, "onRoute");
-                      if (action === "responded") updateStatus(reportId, "Responded");
-                  });
-              });
-
-          } catch (e) {
-              console.error("Error loading reports:", e);
-          }
-      });
+            } catch (e) {
+                console.error("Error loading reports:", e);
+            }
+        });
     }
 
+    // Initial fetch
     fetchReports();
 });
