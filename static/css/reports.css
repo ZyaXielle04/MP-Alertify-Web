@@ -28,3 +28,19 @@
   object-fit: cover;
   border-radius: 8px;
 }
+
+.btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    margin-top: 6px;
+    cursor: pointer;
+    color: white;
+    font-size: 12px;
+}
+
+.btn.gray { background: #7f8c8d; }
+.btn.red { background: #e74c3c; }
+.btn.yellow { background: #f1c40f; color:black; }
+.btn.blue { background: #3498db; }
+.btn.green { background: #2ecc71; }
