@@ -14,7 +14,7 @@ window.addEventListener("DOMContentLoaded", () => {
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
       // Not logged in, redirect to login
-      window.location.href = "/index";
+      window.location.href = "/";
       return;
     }
 
