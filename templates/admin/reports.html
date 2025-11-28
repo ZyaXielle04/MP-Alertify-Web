@@ -49,20 +49,25 @@
     </section>
 
     <section class="dashboard-cards">
-      <div class="card">
-        <h3>Total Users</h3>
-        <p id="totalUsers">0</p>
-      </div>
+      <h2 style="margin-bottom: 15px;">All Reports</h2>
 
-      <div class="card">
-        <h3>Pending Approvals</h3>
-        <p id="pendingUsers">0</p>
-      </div>
-
-      <div class="card">
-        <h3>Active Reports</h3>
-        <p id="activeReports">0</p>
-      </div>
+      <table id="reportsTable" class="reports-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Emergency</th>
+            <th>Description</th>
+            <th>Organization</th>
+            <th>Image</th>
+            <th>Contact</th>
+            <th>Location</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <!-- Reports will auto load here -->
+        </tbody>
+      </table>
     </section>
   </main>
 
