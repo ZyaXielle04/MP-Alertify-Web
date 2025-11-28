@@ -50,6 +50,11 @@ def manage_users():
 def view_reports():
     return render_template("admin/reports.html")
 
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+
 # ---------------------------
 # DISABLE / ENABLE USER
 # ---------------------------
