@@ -46,10 +46,10 @@ def get_access_token():
 # ======================================================
 # SEND PUSH NOTIFICATION (HTTP v1)
 # ======================================================
-def send_fcm_v1(token, title, body, data_payload):
+def send_fcm_v1(token, title, body, data_payload={}):
     access_token = get_access_token()
 
-    url = f"https://fcm.googleapis.com/v1/projects/mp-alertify/messages:send"
+    url = f"https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send"
 
     message = {
         "message": {
@@ -64,11 +64,11 @@ def send_fcm_v1(token, title, body, data_payload):
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json; UTF-8",
+        "Content-Type": "application/json"
     }
 
     response = requests.post(url, headers=headers, json=message)
-    print("FCM v1 Response:", response.text)
+    print("FCM HTTP v1 Response:", response.text)
     return response
 
 
@@ -114,6 +114,9 @@ def register_fcm_token():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ---------------------------------------------------------
+# PUBLICIZE REPORT (Send Notifications)
+# ---------------------------------------------------------
 @app.route("/publicize_report", methods=["POST"])
 def publicize_report():
     data = request.json
@@ -132,7 +135,7 @@ def publicize_report():
             return jsonify({"success": False, "error": "Report not found"}), 404
 
         # -----------------------------
-        # Determine notification body
+        # Determine notification message
         # -----------------------------
         emergency = report.get("emergency", "")
         other = report.get("otherEmergency", "")
@@ -162,45 +165,34 @@ def publicize_report():
 
         timestamp = str(report.get("timestamp", ""))
 
-        # -----------------------------
-        # Notification Title
-        # -----------------------------
         title = "MP Alertify - Emergency Report"
 
         # -----------------------------
-        # Get all tokens
+        # Get all user tokens
         # -----------------------------
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
         # -----------------------------
-        # Send notification
+        # Send notifications using HTTP v1
         # -----------------------------
         for token in tokens:
             payload = {
-                "to": token,
-                "notification": {
-                    "title": title,
-                    "body": body_message,
-                    "sound": "default"
-                },
-                "data": {
-                    "reportId": report_id,
-                    "location": location,
-                    "timestamp": timestamp
-                }
+                "reportId": report_id,
+                "location": location,
+                "timestamp": timestamp
             }
 
-            headers = {
-                "Authorization": f"key={FCM_SERVER_KEY}",
-                "Content-Type": "application/json"
-            }
+            response = send_fcm_v1(
+                token=token,
+                title=title,
+                body=body_message,
+                data_payload=payload
+            )
 
-            response = requests.post(FCM_URL, headers=headers, json=payload)
-
-            # Log errors
+            # Log failed notifications
             if response.status_code != 200:
-                print("FCM Error:", response.text)
+                print("FCM v1 Error:", response.text)
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
