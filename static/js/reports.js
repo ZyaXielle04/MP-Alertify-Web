@@ -38,10 +38,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const reportData = reportSnap.val();
 
-            // Determine message: use emergency if exists, otherwise use otherEmergency
-            const message = reportData.emergency && reportData.emergency.trim() !== ""
-                ? reportData.emergency
-                : reportData.otherEmergency || "No message";
+            // Determine message: if emergency is "Others", use otherEmergency
+            const message = (reportData.emergency === "Others" && reportData.otherEmergency && reportData.otherEmergency.trim() !== "")
+                ? reportData.otherEmergency
+                : reportData.emergency || "No message";
 
             // Determine location
             let location = "N/A";
