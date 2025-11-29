@@ -91,7 +91,7 @@ def publicize_report():
         if not report:
             return jsonify({"success": False, "error": "Report not found"}), 404
 
-        # Determine message: use emergency if exists, otherwise use otherEmergency
+        # Determine message
         message = report.get("emergency") or report.get("otherEmergency") or "No message"
 
         # Determine location
@@ -114,13 +114,16 @@ def publicize_report():
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
-        # Send notifications (data-only payload for full control)
+        # Send notifications with both `notification` and `data` payload
         for token in tokens:
             payload = {
                 "to": token,
-                "data": {
+                "notification": {  # system tray notification
                     "title": title,
                     "body": message,
+                    "sound": "default"
+                },
+                "data": {  # extra info your app can use
                     "reportId": report_id,
                     "location": location,
                     "timestamp": str(report.get("timestamp", ""))
