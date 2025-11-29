@@ -29,48 +29,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ---------------------------
-    // Publicize Report
+    // Publicize Report (calls Flask backend)
     // ---------------------------
     async function publicizeReport(reportId) {
+        if (!reportId) return;
+
         try {
-            const reportSnap = await db.ref("reports/" + reportId).get();
-            if (!reportSnap.exists()) return;
-
-            const reportData = reportSnap.val();
-
-            // Determine message: if emergency is "Others", use otherEmergency
-            const message = (reportData.emergency === "Others" && reportData.otherEmergency && reportData.otherEmergency.trim() !== "")
-                ? reportData.otherEmergency
-                : reportData.emergency || "No message";
-
-            // Determine location
-            let location = "N/A";
-            if (reportData.locationType === "HomeAddress") {
-                location = reportData.homeAddress || "No Home Address";
-            } else if (reportData.locationType === "PresentAddress") {
-                location = reportData.presentAddress || "No Present Address";
-            } else if (reportData.locationType === "Current Location" || reportData.locationType === "customLocation") {
-                const loc = reportData.location || "Unknown Location";
-                const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
-                if (match) {
-                    const lat = match[1];
-                    const lng = match[2];
-                    location = `${lat}, ${lng}`;
-                } else {
-                    location = loc;
-                }
-            }
-
-            await db.ref("notifications").push({
-                title: "A new emergency report has been publicized near you!",
-                message: message,
-                location: location,
-                timestamp: Date.now(),
+            const response = await fetch("/publicize_report", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reportId })
             });
 
-            alert("Report publicized successfully!");
+            const result = await response.json();
+
+            if (result.success) {
+                alert("Report publicized & notifications sent!");
+            } else {
+                alert("Error publicizing report: " + result.error);
+                console.error("Publicize error:", result);
+            }
         } catch (err) {
-            console.error("Error publicizing report:", err);
+            console.error("Error calling publicize_report endpoint:", err);
+            alert("Failed to publicize report. Check console for details.");
         }
     }
 
