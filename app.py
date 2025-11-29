@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 import firebase_admin
 from firebase_admin import credentials, auth, db
+from google.oauth2 import service_account
+import google.auth.transport.requests
 import requests
 import os
 import json
@@ -25,21 +27,60 @@ firebase_admin.initialize_app(cred, {
     "databaseURL": "https://mp-alertify-default-rtdb.asia-southeast1.firebasedatabase.app/"
 })
 
-# ---------------------------
-# FCM CONFIG
-# ---------------------------
-FCM_SERVER_KEY = os.environ.get("FCM_SERVER_KEY")
-FCM_URL = "https://fcm.googleapis.com/fcm/send"
+service_account_info = json.loads(cred_json)
+PROJECT_ID = service_account_info["project_id"]
+
+# ======================================================
+# FCM HTTP v1 TOKEN CREATION
+# ======================================================
+def get_access_token():
+    credentials_obj = service_account.Credentials.from_service_account_info(
+        service_account_info,
+        scopes=["https://www.googleapis.com/auth/firebase.messaging"],
+    )
+    request_obj = google.auth.transport.requests.Request()
+    credentials_obj.refresh(request_obj)
+    return credentials_obj.token
+
+
+# ======================================================
+# SEND PUSH NOTIFICATION (HTTP v1)
+# ======================================================
+def send_fcm_v1(token, title, body, data_payload):
+    access_token = get_access_token()
+
+    url = f"https://fcm.googleapis.com/v1/projects/mp-alertify/messages:send"
+
+    message = {
+        "message": {
+            "token": token,
+            "notification": {
+                "title": title,
+                "body": body
+            },
+            "data": data_payload
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json; UTF-8",
+    }
+
+    response = requests.post(url, headers=headers, json=message)
+    print("FCM v1 Response:", response.text)
+    return response
+
 
 # ---------------------------
-# ROOT ROUTE - Landing Page
+# ROOT ROUTE
 # ---------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
 
 # ---------------------------
-# ADMIN PAGES
+# Admin pages
 # ---------------------------
 @app.route("/admin/dashboard")
 def admin_dashboard():
@@ -53,8 +94,9 @@ def manage_users():
 def view_reports():
     return render_template("admin/reports.html")
 
+
 # ---------------------------------------------------------
-# STORE FCM TOKEN (CALLED BY ANDROID APP ON LOGIN)
+# STORE FCM TOKEN
 # ---------------------------------------------------------
 @app.route("/register_fcm_token", methods=["POST"])
 def register_fcm_token():
@@ -71,6 +113,7 @@ def register_fcm_token():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # ---------------------------------------------------------
 # PUBLICIZE A REPORT (ADMIN TRIGGER)
 # ---------------------------------------------------------
@@ -83,7 +126,7 @@ def publicize_report():
         return jsonify({"success": False, "error": "Missing reportId"}), 400
 
     try:
-        # Mark report as publicized
+        # Mark report publicized
         db.reference(f"reports/{report_id}/publicized").set(True)
 
         # Load report
@@ -91,8 +134,8 @@ def publicize_report():
         if not report:
             return jsonify({"success": False, "error": "Report not found"}), 404
 
-        # Determine message
-        message = report.get("emergency") or report.get("otherEmergency") or "No message"
+        message = report.get("emergency") or report.get("otherEmergency") or "New report"
+        title = "MP Alertify - Emergency Report"
 
         # Determine location
         location = "N/A"
@@ -108,44 +151,33 @@ def publicize_report():
             else:
                 location = loc
 
-        title = "MP Alertify - New Emergency Report"
-
-        # Fetch all user tokens
+        # Load all user tokens
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
-        # Send notifications with both `notification` and `data` payload
+        # Send notifications
         for token in tokens:
-            payload = {
-                "to": token,
-                "notification": {  # system tray notification
-                    "title": title,
-                    "body": message,
-                    "sound": "default"
-                },
-                "data": {  # extra info your app can use
-                    "reportId": report_id,
-                    "location": location,
-                    "timestamp": str(report.get("timestamp", ""))
-                }
+            data_payload = {
+                "reportId": report_id,
+                "location": location,
+                "timestamp": str(report.get("timestamp", "")),
             }
 
-            headers = {
-                "Authorization": f"key={FCM_SERVER_KEY}",
-                "Content-Type": "application/json"
-            }
-
-            response = requests.post(FCM_URL, headers=headers, json=payload)
-            if response.status_code != 200:
-                print(f"Failed to send notification to {token}: {response.text}")
+            send_fcm_v1(
+                token=token,
+                title=title,
+                body=message,
+                data_payload=data_payload
+            )
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # ---------------------------------------------------------
-# DISABLE / ENABLE USER
+# DISABLE USER
 # ---------------------------------------------------------
 @app.route("/disable_user", methods=["POST"])
 def disable_user():
@@ -154,16 +186,15 @@ def disable_user():
     disable = data.get("disable")
 
     if not uid or disable is None:
-        return jsonify({"success": False, "error": "Missing uid or disable field"}), 400
+        return jsonify({"success": False, "error": "Missing uid or disable"}), 400
 
     try:
         auth.update_user(uid, disabled=disable)
         db.reference(f"users/{uid}/disabled").set(disable)
-
-        status = "disabled" if disable else "enabled"
-        return jsonify({"success": True, "message": f"User {uid} has been {status}"})
+        return jsonify({"success": True, "message": f"User {uid} updated"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ---------------------------
 # Run server
