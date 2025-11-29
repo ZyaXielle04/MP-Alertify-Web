@@ -114,9 +114,6 @@ def register_fcm_token():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ---------------------------------------------------------
-# PUBLICIZE A REPORT (ADMIN TRIGGER)
-# ---------------------------------------------------------
 @app.route("/publicize_report", methods=["POST"])
 def publicize_report():
     data = request.json
@@ -126,7 +123,7 @@ def publicize_report():
         return jsonify({"success": False, "error": "Missing reportId"}), 400
 
     try:
-        # Mark report publicized
+        # Mark report as publicized
         db.reference(f"reports/{report_id}/publicized").set(True)
 
         # Load report
@@ -134,41 +131,76 @@ def publicize_report():
         if not report:
             return jsonify({"success": False, "error": "Report not found"}), 404
 
-        message = report.get("emergency") or report.get("otherEmergency") or "New report"
-        title = "MP Alertify - Emergency Report"
+        # -----------------------------
+        # Determine notification body
+        # -----------------------------
+        emergency = report.get("emergency", "")
+        other = report.get("otherEmergency", "")
 
+        if emergency == "Others":
+            body_message = other if other else "Emergency Report"
+        else:
+            body_message = emergency if emergency else "Emergency Report"
+
+        # -----------------------------
         # Determine location
+        # -----------------------------
         location = "N/A"
         loc_type = report.get("locationType")
+        raw_loc = report.get("location", "")
+
         if loc_type in ["HomeAddress", "PresentAddress"]:
-            location = report.get("location") or "N/A"
+            location = raw_loc or "N/A"
+
         elif loc_type in ["Current Location", "customLocation"]:
-            loc = report.get("location", "Unknown Location")
-            match = re.match(r"Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)", loc)
+            match = re.match(r"Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)", raw_loc)
             if match:
                 lat, lng = match.groups()
                 location = f"{lat}, {lng}"
             else:
-                location = loc
+                location = raw_loc or "Unknown Location"
 
-        # Load all user tokens
+        timestamp = str(report.get("timestamp", ""))
+
+        # -----------------------------
+        # Notification Title
+        # -----------------------------
+        title = "MP Alertify - Emergency Report"
+
+        # -----------------------------
+        # Get all tokens
+        # -----------------------------
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
-        # Send notifications
+        # -----------------------------
+        # Send notification
+        # -----------------------------
         for token in tokens:
-            data_payload = {
-                "reportId": report_id,
-                "location": location,
-                "timestamp": str(report.get("timestamp", "")),
+            payload = {
+                "to": token,
+                "notification": {
+                    "title": title,
+                    "body": body_message,
+                    "sound": "default"
+                },
+                "data": {
+                    "reportId": report_id,
+                    "location": location,
+                    "timestamp": timestamp
+                }
             }
 
-            send_fcm_v1(
-                token=token,
-                title=title,
-                body=message,
-                data_payload=data_payload
-            )
+            headers = {
+                "Authorization": f"key={FCM_SERVER_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(FCM_URL, headers=headers, json=payload)
+
+            # Log errors
+            if response.status_code != 200:
+                print("FCM Error:", response.text)
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
