@@ -114,16 +114,13 @@ def publicize_report():
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
-        # Send notifications
+        # Send notifications (data-only payload for full control)
         for token in tokens:
             payload = {
                 "to": token,
-                "notification": {   # ensures tray notification even if app is closed
+                "data": {
                     "title": title,
                     "body": message,
-                    "sound": "default"
-                },
-                "data": {   # optional, extra info for app when user taps notification
                     "reportId": report_id,
                     "location": location,
                     "timestamp": str(report.get("timestamp", ""))
@@ -135,7 +132,9 @@ def publicize_report():
                 "Content-Type": "application/json"
             }
 
-            requests.post(FCM_URL, headers=headers, json=payload)
+            response = requests.post(FCM_URL, headers=headers, json=payload)
+            if response.status_code != 200:
+                print(f"Failed to send notification to {token}: {response.text}")
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
