@@ -4,6 +4,7 @@ from firebase_admin import credentials, auth, db
 import requests
 import os
 import json
+import re
 
 # ---------------------------
 # Flask app
@@ -52,7 +53,6 @@ def manage_users():
 def view_reports():
     return render_template("admin/reports.html")
 
-
 # ---------------------------------------------------------
 # STORE FCM TOKEN (CALLED BY ANDROID APP ON LOGIN)
 # ---------------------------------------------------------
@@ -71,7 +71,6 @@ def register_fcm_token():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 # ---------------------------------------------------------
 # PUBLICIZE A REPORT (ADMIN TRIGGER)
 # ---------------------------------------------------------
@@ -89,53 +88,63 @@ def publicize_report():
 
         # Load report
         report = db.reference(f"reports/{report_id}").get()
+        if not report:
+            return jsonify({"success": False, "error": "Report not found"}), 404
 
-        # Create notification text
-        title = "MP Alertify - New Report"
-        body = f"Report from {report.get('reporter', 'Unknown')} has been publicized."
+        # Determine message: use emergency if exists, otherwise use otherEmergency
+        message = report.get("emergency") or report.get("otherEmergency") or "No message"
+
+        # Determine location
+        location = "N/A"
+        loc_type = report.get("locationType")
+        if loc_type in ["HomeAddress", "PresentAddress"]:
+            location = report.get("location") or "N/A"
+        elif loc_type in ["Current Location", "customLocation"]:
+            loc = report.get("location", "Unknown Location")
+            match = re.match(r"Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)", loc)
+            if match:
+                lat, lng = match.groups()
+                location = f"{lat}, {lng}"
+            else:
+                location = loc
+
+        title = "MP Alertify - New Emergency Report"
 
         # Fetch all user tokens
         users = db.reference("users").get()
-        tokens = []
-        for uid, info in users.items():
-            if "fcmToken" in info:
-                tokens.append(info["fcmToken"])
+        tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
         # Send notifications
         for token in tokens:
-            send_fcm_notification(token, title, body)
+            payload = {
+                "to": token,
+                "notification": {   # ensures tray notification even if app is closed
+                    "title": title,
+                    "body": message,
+                    "sound": "default"
+                },
+                "data": {   # optional, extra info for app when user taps notification
+                    "reportId": report_id,
+                    "location": location,
+                    "timestamp": str(report.get("timestamp", ""))
+                }
+            }
+
+            headers = {
+                "Authorization": f"key={FCM_SERVER_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            requests.post(FCM_URL, headers=headers, json=payload)
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 # ---------------------------------------------------------
-# SEND FCM NOTIFICATION (NO CLOUD FUNCTIONS NEEDED)
-# ---------------------------------------------------------
-def send_fcm_notification(token, title, body):
-    headers = {
-        "Authorization": f"key={FCM_SERVER_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "to": token,
-        "notification": {
-            "title": title,
-            "body": body,
-            "sound": "default"
-        }
-    }
-
-    response = requests.post(FCM_URL, headers=headers, json=payload)
-    return response.json()
-
-
-# ---------------------------
 # DISABLE / ENABLE USER
-# ---------------------------
+# ---------------------------------------------------------
 @app.route("/disable_user", methods=["POST"])
 def disable_user():
     data = request.json
@@ -153,7 +162,6 @@ def disable_user():
         return jsonify({"success": True, "message": f"User {uid} has been {status}"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 # ---------------------------
 # Run server
