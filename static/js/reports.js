@@ -38,11 +38,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const reportData = reportSnap.val();
 
+            // Determine message: use emergency if exists, otherwise use otherEmergency
+            const message = reportData.emergency && reportData.emergency.trim() !== ""
+                ? reportData.emergency
+                : reportData.otherEmergency || "No message";
+
+            // Determine location
+            let location = "N/A";
+            if (reportData.locationType === "HomeAddress") {
+                location = reportData.homeAddress || "No Home Address";
+            } else if (reportData.locationType === "PresentAddress") {
+                location = reportData.presentAddress || "No Present Address";
+            } else if (reportData.locationType === "Current Location" || reportData.locationType === "customLocation") {
+                const loc = reportData.location || "Unknown Location";
+                const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
+                if (match) {
+                    const lat = match[1];
+                    const lng = match[2];
+                    location = `${lat}, ${lng}`;
+                } else {
+                    location = loc;
+                }
+            }
+
             await db.ref("notifications").push({
-                title: reportData.emergency,
-                message: reportData.additionalMessage || '',
+                title: "A new emergency report has been publicized near you!",
+                message: message,
+                location: location,
                 timestamp: Date.now(),
-                reportId: reportId
             });
 
             alert("Report publicized successfully!");
