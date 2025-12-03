@@ -44,3 +44,31 @@
 .btn.yellow { background: #f1c40f; color:black; }
 .btn.blue { background: #3498db; }
 .btn.green { background: #2ecc71; }
+
+.reporter-name {
+    cursor: pointer;
+    text-decoration: underline;
+}
+.reporter-name:hover {
+    color: #2980b9;
+}
+
+.profile-modal {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 15px;
+    width: 260px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    z-index: 9999;
+}
+.hidden {
+    display: none;
+}
+.profile-content img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}

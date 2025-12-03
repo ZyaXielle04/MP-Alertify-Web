@@ -75,6 +75,21 @@
     © 2025 MP-Alertify. All Rights Reserved.
   </footer>
 
+  <div id="userProfileModal" class="profile-modal hidden">
+      <div class="profile-content">
+          <h3>User Information</h3>
+          <p><strong>Name:</strong> <span id="profName"></span></p>
+          <p><strong>Email:</strong> <span id="profEmail"></span></p>
+          <p><strong>Contact:</strong> <span id="profContact"></span></p>
+          <p><strong>Age:</strong> <span id="profAge"></span></p>
+          <p><strong>Home Address:</strong> <span id="profHome"></span></p>
+          <p><strong>Present Address:</strong> <span id="profPresent"></span></p>
+
+          <h4>Emergency Contacts</h4>
+          <div id="profContacts"></div>
+      </div>
+  </div>
+
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
   <script src="{{ url_for('static', filename='js/base.js') }}"></script>

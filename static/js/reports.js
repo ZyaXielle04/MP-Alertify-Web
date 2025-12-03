@@ -2,6 +2,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const reportsTableBody = document.getElementById("reportsTableBody");
     let currentUserRole = "user"; // default role
 
+    // --------------------------------------------------------
+    // Inject CSS for image hover zoom (scale 2.5)
+    // --------------------------------------------------------
+    const imgStyle = document.createElement("style");
+    imgStyle.innerHTML = `
+        #reportsTableBody img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            transition: transform 0.25s ease-in-out;
+        }
+
+        #reportsTableBody img:hover {
+            transform: scale(2.5);
+            z-index: 9999;
+            position: relative;
+        }
+    `;
+    document.head.appendChild(imgStyle);
+
+    // --------------------------------------------------------
+    // Tooltip container for reporter hover
+    // --------------------------------------------------------
+    const tooltip = document.createElement("div");
+    tooltip.id = "reporterTooltip";
+    tooltip.style.position = "fixed";
+    tooltip.style.padding = "10px";
+    tooltip.style.background = "white";
+    tooltip.style.border = "1px solid #ccc";
+    tooltip.style.borderRadius = "8px";
+    tooltip.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+    tooltip.style.display = "none";
+    tooltip.style.zIndex = "9999";
+    tooltip.style.transition = "opacity 0.15s ease-in-out";
+    tooltip.style.opacity = "0";
+    tooltip.style.pointerEvents = "none";
+    document.body.appendChild(tooltip);
+
     // ---------------------------
     // Get current user role
     // ---------------------------
@@ -13,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentUserRole = userSnap.val();
             }
         }
-        fetchReports(); // fetch reports after getting role
+        fetchReports();
     });
 
     // ---------------------------
@@ -22,14 +61,14 @@ document.addEventListener("DOMContentLoaded", () => {
     async function updateStatus(reportId, newStatus) {
         try {
             await db.ref("reports/" + reportId).update({ status: newStatus });
-            fetchReports(); // refresh table
+            fetchReports();
         } catch (err) {
             console.error("Error updating status:", err);
         }
     }
 
     // ---------------------------
-    // Publicize Report (calls Flask backend)
+    // Publicize Report
     // ---------------------------
     async function publicizeReport(reportId) {
         if (!reportId) return;
@@ -47,11 +86,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Report publicized & notifications sent!");
             } else {
                 alert("Error publicizing report: " + result.error);
-                console.error("Publicize error:", result);
             }
         } catch (err) {
             console.error("Error calling publicize_report endpoint:", err);
-            alert("Failed to publicize report. Check console for details.");
+            alert("Failed to publicize report.");
         }
     }
 
@@ -114,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         displayLocation = user.homeAddress || "No Home Address";
                     } else if (r.locationType === "PresentAddress") {
                         displayLocation = user.presentAddress || "No Present Address";
-                    } else if (r.locationType === "Current Location" || r.locationType === "customLocation") {
+                    } else {
                         let loc = r.location || "Unknown Location";
                         const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
                         if (match) {
@@ -125,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     // ---------------------------
-                    // STATUS & BUTTONS
+                    // STATUS BUTTONS
                     // ---------------------------
                     let statusButtons = "";
                     switch (r.status) {
@@ -154,10 +192,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         ${publicizeHtml}
                     `;
 
-                    // Append to table
+                    // ---------------------------
+                    // TABLE ROW
+                    // ---------------------------
                     const row = `
                         <tr>
-                            <td>${name}</td>
+                            <td>
+                                <span class="reporter-name"
+                                      data-id="${reporterId}"
+                                      style="cursor:pointer; color:#3498db; text-decoration:underline;">
+                                    ${name}
+                                </span>
+                            </td>
                             <td>${emergency}</td>
                             <td>${description}</td>
                             <td>${org}</td>
@@ -171,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 // ---------------------------
-                // BUTTON HANDLER
+                // STATUS BUTTON HANDLER
                 // ---------------------------
                 document.querySelectorAll(".btn").forEach(btn => {
                     btn.addEventListener("click", () => {
@@ -183,6 +229,43 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (action === "onroute") updateStatus(reportId, "onRoute");
                         if (action === "responded") updateStatus(reportId, "Responded");
                         if (action === "publicize") publicizeReport(reportId);
+                    });
+                });
+
+                // ---------------------------
+                // HOVER TOOLTIP (Reporter Info)
+                // ---------------------------
+                document.querySelectorAll(".reporter-name").forEach(span => {
+                    span.addEventListener("mouseenter", async (e) => {
+                        const uid = e.target.dataset.id;
+
+                        const snap = await db.ref("users/" + uid).get();
+                        if (!snap.exists()) return;
+
+                        const u = snap.val();
+
+                        tooltip.innerHTML = `
+                            <strong>${u.name || "Unknown"}</strong><br>
+                            <small>${u.email || "No email"}</small><br><br>
+                            <strong>Contact:</strong> ${u.contact || "N/A"}<br>
+                            <strong>Home Address:</strong> ${u.homeAddress || "N/A"}<br>
+                            <strong>Present Address:</strong> ${u.presentAddress || "N/A"}
+                        `;
+
+                        tooltip.style.display = "block";
+                        tooltip.style.opacity = "1";
+                    });
+
+                    span.addEventListener("mousemove", (e) => {
+                        tooltip.style.left = (e.pageX + 15) + "px";
+                        tooltip.style.top = (e.pageY + 15) + "px";
+                    });
+
+                    span.addEventListener("mouseleave", () => {
+                        tooltip.style.opacity = "0";
+                        setTimeout(() => {
+                            tooltip.style.display = "none";
+                        }, 150);
                     });
                 });
 
