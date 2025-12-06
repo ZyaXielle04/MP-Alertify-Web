@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentUserRole = "user"; // default role
 
     // --------------------------------------------------------
-    // Inject CSS for image hover zoom (scale 2.5)
+    // Inject CSS for image hover zoom (scale 2.5) and modal
     // --------------------------------------------------------
     const imgStyle = document.createElement("style");
     imgStyle.innerHTML = `
@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
             object-fit: cover;
             border-radius: 6px;
             transition: transform 0.25s ease-in-out;
+            cursor: pointer;
         }
 
         #reportsTableBody img:hover {
@@ -20,26 +21,57 @@ document.addEventListener("DOMContentLoaded", () => {
             z-index: 9999;
             position: relative;
         }
+
+        /* Modal styling */
+        #reporterModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            display: none;
+            padding: 20px;
+        }
+
+        #reporterModal img {
+            max-width: 100%;
+            margin-top: 10px;
+            border-radius: 6px;
+        }
+
+        #reporterModalClose {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+        }
     `;
     document.head.appendChild(imgStyle);
 
     // --------------------------------------------------------
-    // Tooltip container for reporter hover
+    // Modal container
     // --------------------------------------------------------
-    const tooltip = document.createElement("div");
-    tooltip.id = "reporterTooltip";
-    tooltip.style.position = "fixed";
-    tooltip.style.padding = "10px";
-    tooltip.style.background = "white";
-    tooltip.style.border = "1px solid #ccc";
-    tooltip.style.borderRadius = "8px";
-    tooltip.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-    tooltip.style.display = "none";
-    tooltip.style.zIndex = "9999";
-    tooltip.style.transition = "opacity 0.15s ease-in-out";
-    tooltip.style.opacity = "0";
-    tooltip.style.pointerEvents = "none";
-    document.body.appendChild(tooltip);
+    const modal = document.createElement("div");
+    modal.id = "reporterModal";
+    modal.innerHTML = `
+        <span id="reporterModalClose">&times;</span>
+        <div id="reporterModalContent"></div>
+    `;
+    document.body.appendChild(modal);
+
+    const modalContent = document.getElementById("reporterModalContent");
+    const modalClose = document.getElementById("reporterModalClose");
+
+    modalClose.addEventListener("click", () => {
+        modal.style.display = "none";
+    });
 
     // ---------------------------
     // Get current user role
@@ -72,16 +104,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // ---------------------------
     async function publicizeReport(reportId) {
         if (!reportId) return;
-
         try {
             const response = await fetch("/publicize_report", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ reportId })
             });
-
             const result = await response.json();
-
             if (result.success) {
                 alert("Report publicized & notifications sent!");
             } else {
@@ -200,6 +229,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             <td>
                                 <span class="reporter-name"
                                       data-id="${reporterId}"
+                                      data-emergency="${emergency}"
+                                      data-description="${description}"
+                                      data-location="${displayLocation}"
+                                      data-image="${r.imageUrl || ''}"
                                       style="cursor:pointer; color:#3498db; text-decoration:underline;">
                                     ${name}
                                 </span>
@@ -233,39 +266,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 // ---------------------------
-                // HOVER TOOLTIP (Reporter Info)
+                // CLICK MODAL (Reporter Info + Report Details)
                 // ---------------------------
                 document.querySelectorAll(".reporter-name").forEach(span => {
-                    span.addEventListener("mouseenter", async (e) => {
+                    span.addEventListener("click", async (e) => {
                         const uid = e.target.dataset.id;
-
                         const snap = await db.ref("users/" + uid).get();
                         if (!snap.exists()) return;
-
                         const u = snap.val();
 
-                        tooltip.innerHTML = `
-                            <strong>${u.name || "Unknown"}</strong><br>
-                            <small>${u.email || "No email"}</small><br><br>
+                        const emergency = e.target.dataset.emergency;
+                        const description = e.target.dataset.description;
+                        const location = e.target.dataset.location;
+                        const imageUrl = e.target.dataset.image;
+
+                        modalContent.innerHTML = `
+                            <strong>Reporter Info</strong><br>
+                            <strong>Name:</strong> ${u.name || "Unknown"}<br>
+                            <strong>Email:</strong> ${u.email || "No email"}<br>
                             <strong>Contact:</strong> ${u.contact || "N/A"}<br>
                             <strong>Home Address:</strong> ${u.homeAddress || "N/A"}<br>
-                            <strong>Present Address:</strong> ${u.presentAddress || "N/A"}
+                            <strong>Present Address:</strong> ${u.presentAddress || "N/A"}<br><br>
+
+                            <strong>Report Info</strong><br>
+                            <strong>Emergency:</strong> ${emergency}<br>
+                            <strong>Description:</strong> ${description}<br>
+                            <strong>Location:</strong> ${location}<br>
+                            ${imageUrl ? `<img src="${imageUrl}" alt="Report Image">` : ""}
                         `;
-
-                        tooltip.style.display = "block";
-                        tooltip.style.opacity = "1";
-                    });
-
-                    span.addEventListener("mousemove", (e) => {
-                        tooltip.style.left = (e.pageX + 15) + "px";
-                        tooltip.style.top = (e.pageY + 15) + "px";
-                    });
-
-                    span.addEventListener("mouseleave", () => {
-                        tooltip.style.opacity = "0";
-                        setTimeout(() => {
-                            tooltip.style.display = "none";
-                        }, 150);
+                        modal.style.display = "block";
                     });
                 });
 
