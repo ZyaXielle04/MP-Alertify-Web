@@ -171,24 +171,28 @@ document.addEventListener("DOMContentLoaded", () => {
                     const emergency = r.emergency === "Others" ? r.otherEmergency : r.emergency;
                     const org = r.organization || "N/A";
                     const description = r.additionalMessage || "No description";
-                    const imageHtml = r.imageUrl ? `<img src="${r.imageUrl}" alt="Attachment">` : `<span>No Image</span>`;
+                    const imageUrl = r.imageUrl || "";
 
                     // ---------------------------
                     // LOCATION
                     // ---------------------------
-                    let displayLocation = "N/A";
+                    let locationText = "N/A";
+                    let lat = "";
+                    let lng = "";
                     if (r.locationType === "HomeAddress") {
-                        displayLocation = user.homeAddress || "No Home Address";
+                        locationText = user.homeAddress || "No Home Address";
                     } else if (r.locationType === "PresentAddress") {
-                        displayLocation = user.presentAddress || "No Present Address";
+                        locationText = user.presentAddress || "No Present Address";
                     } else {
                         let loc = r.location || "Unknown Location";
                         const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
                         if (match) {
-                            const lat = match[1];
-                            const lng = match[2];
-                            displayLocation = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>`;
-                        } else displayLocation = loc;
+                            lat = match[1];
+                            lng = match[2];
+                            locationText = `${lat}, ${lng}`;
+                        } else {
+                            locationText = loc;
+                        }
                     }
 
                     // ---------------------------
@@ -224,6 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // ---------------------------
                     // TABLE ROW
                     // ---------------------------
+                    const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="Attachment">` : `<span>No Image</span>`;
                     const row = `
                         <tr>
                             <td>
@@ -231,8 +236,10 @@ document.addEventListener("DOMContentLoaded", () => {
                                       data-id="${reporterId}"
                                       data-emergency="${emergency}"
                                       data-description="${description}"
-                                      data-location="${displayLocation}"
-                                      data-image="${r.imageUrl || ''}"
+                                      data-location-text="${locationText}"
+                                      data-lat="${lat}"
+                                      data-lng="${lng}"
+                                      data-image="${imageUrl}"
                                       style="cursor:pointer; color:#3498db; text-decoration:underline;">
                                     ${name}
                                 </span>
@@ -242,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <td>${org}</td>
                             <td>${imageHtml}</td>
                             <td>${contact}</td>
-                            <td>${displayLocation}</td>
+                            <td>${lat && lng ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>` : locationText}</td>
                             <td>${statusHtml}</td>
                         </tr>
                     `;
@@ -277,8 +284,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         const emergency = e.target.dataset.emergency;
                         const description = e.target.dataset.description;
-                        const location = e.target.dataset.location;
+                        const locationText = e.target.dataset.locationText;
+                        const lat = e.target.dataset.lat;
+                        const lng = e.target.dataset.lng;
                         const imageUrl = e.target.dataset.image;
+
+                        let locationHtml = locationText;
+                        if (lat && lng) {
+                            locationHtml = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>`;
+                        }
 
                         modalContent.innerHTML = `
                             <strong>Reporter Info</strong><br>
@@ -291,7 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <strong>Report Info</strong><br>
                             <strong>Emergency:</strong> ${emergency}<br>
                             <strong>Description:</strong> ${description}<br>
-                            <strong>Location:</strong> ${location}<br>
+                            <strong>Location:</strong> ${locationHtml}<br>
                             ${imageUrl ? `<img src="${imageUrl}" alt="Report Image">` : ""}
                         `;
                         modal.style.display = "block";
