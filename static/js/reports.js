@@ -30,12 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
             transform: translate(-50%, -50%);
             width: 90%;
             max-width: 500px;
+            max-height: 70vh; /* Limit height to 70% of viewport */
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             z-index: 10000;
             display: none;
             padding: 20px;
+            overflow-y: auto; /* Make scrollable if content exceeds height */
         }
 
         #reporterModal img {
