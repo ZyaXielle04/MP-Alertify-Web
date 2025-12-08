@@ -178,10 +178,10 @@ def publicize_report():
         # -----------------------------
         for token in tokens:
             payload = {
-                "reportId": report_id,
-                "emergencyType": emergency,
-                "location": location,
-                "timestamp": timestamp
+                "reportId": str(report_id),
+                "emergencyType": str(emergency),
+                "location": str(location),
+                "timestamp": str(timestamp)
             }
 
             response = send_fcm_v1(
