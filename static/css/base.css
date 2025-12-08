@@ -126,11 +126,9 @@ header h1 {
 ------------------------------------------ */
 .main {
   margin-left: 230px; /* space for sidebar */
-  padding: 20px 30px; /* no need to include header/footer padding here */
-  
+  padding: 90px 30px 30px; /* 90px = space for header */
+  min-height: calc(100vh - 70px - 60px); 
   /* full height minus header & footer */
-  height: calc(100vh - 70px - 60px); 
-  overflow-y: auto; /* scroll if content exceeds */
   transition: margin-left 0.3s ease;
 }
 
@@ -192,6 +190,6 @@ footer {
 
   .main {
     margin-left: 0;
-    padding: 20px;
+    padding: 90px 20px 30px;
   }
 }
