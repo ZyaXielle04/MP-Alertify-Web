@@ -7,6 +7,7 @@ import requests
 import os
 import json
 import re
+from datetime import datetime
 
 # ---------------------------
 # Flask app
@@ -78,6 +79,7 @@ def send_fcm_v1(token, title, body, data_payload={}):
 @app.route("/")
 def home():
     return render_template("index.html")
+
 
 # ---------------------------
 # Admin pages
@@ -154,7 +156,6 @@ def publicize_report():
 
         if loc_type in ["HomeAddress", "PresentAddress"]:
             location = raw_loc or "N/A"
-
         elif loc_type in ["Current Location", "customLocation"]:
             match = re.match(r"Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)", raw_loc)
             if match:
@@ -163,7 +164,15 @@ def publicize_report():
             else:
                 location = raw_loc or "Unknown Location"
 
-        timestamp = str(report.get("timestamp", ""))
+        # -----------------------------
+        # Format timestamp
+        # -----------------------------
+        ts = report.get("timestamp")
+        if ts:
+            # Convert milliseconds to readable datetime
+            timestamp_str = datetime.fromtimestamp(int(ts)/1000).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            timestamp_str = "Unknown"
 
         title = "MP Alertify - Emergency Report"
 
@@ -181,7 +190,7 @@ def publicize_report():
                 "reportId": report_id,
                 "emergencyType": emergency,
                 "location": location,
-                "timestamp": str(timestamp)
+                "timestamp": timestamp_str
             }
 
             response = send_fcm_v1(
