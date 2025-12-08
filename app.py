@@ -143,9 +143,9 @@ def publicize_report():
         other = report.get("otherEmergency", "")
 
         if emergency == "Others":
-            body_message = other if other else "Emergency Report"
+            main_message = other if other else "Emergency Report"
         else:
-            body_message = emergency if emergency else "Emergency Report"
+            main_message = emergency if emergency else "Emergency Report"
 
         # -----------------------------
         # Determine location
@@ -169,10 +169,14 @@ def publicize_report():
         # -----------------------------
         ts = report.get("timestamp")
         if ts:
-            # Convert milliseconds to readable datetime
             timestamp_str = datetime.fromtimestamp(int(ts)/1000).strftime("%Y-%m-%d %H:%M:%S")
         else:
             timestamp_str = "Unknown"
+
+        # -----------------------------
+        # Combine everything for notification body
+        # -----------------------------
+        body_message = f"{main_message}\nLocation: {location}\nReported: {timestamp_str}"
 
         title = "MP Alertify - Emergency Report"
 
@@ -200,7 +204,6 @@ def publicize_report():
                 data_payload=payload
             )
 
-            # Log failed notifications
             if response.status_code != 200:
                 print("FCM v1 Error:", response.text)
 
