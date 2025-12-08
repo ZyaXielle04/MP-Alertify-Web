@@ -179,6 +179,7 @@ def publicize_report():
         for token in tokens:
             payload = {
                 "reportId": report_id,
+                "emergencyType": emergency,
                 "location": location,
                 "timestamp": timestamp
             }
