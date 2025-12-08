@@ -30,14 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
             transform: translate(-50%, -50%);
             width: 90%;
             max-width: 500px;
-            max-height: 70vh; /* Limit height to 70% of viewport */
+            max-height: 70vh;
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             z-index: 10000;
             display: none;
             padding: 20px;
-            overflow-y: auto; /* Make scrollable if content exceeds height */
+            overflow-y: auto;
         }
 
         #reporterModal img {
@@ -76,15 +76,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ---------------------------
+    // Helper: Get address from lat/lng via OpenStreetMap Nominatim
+    // ---------------------------
+    async function getAddressFromCoords(lat, lng) {
+        if (!lat || !lng) return "N/A";
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+        try {
+            const response = await fetch(url, { headers: { "User-Agent": "MP-Alertify-App" } });
+            const data = await response.json();
+            return data.display_name || `${lat}, ${lng}`;
+        } catch (err) {
+            console.error("Nominatim error:", err);
+            return `${lat}, ${lng}`;
+        }
+    }
+
+    // ---------------------------
     // Get current user role
     // ---------------------------
     firebase.auth().onAuthStateChanged(async (user) => {
         if (user) {
-            const uid = user.uid;
-            const userSnap = await db.ref("users/" + uid + "/role").get();
-            if (userSnap.exists()) {
-                currentUserRole = userSnap.val();
-            }
+            const uidSnap = await db.ref("users/" + user.uid + "/role").get();
+            if (uidSnap.exists()) currentUserRole = uidSnap.val();
         }
         fetchReports();
     });
@@ -95,7 +108,61 @@ document.addEventListener("DOMContentLoaded", () => {
     async function updateStatus(reportId, newStatus) {
         try {
             await db.ref("reports/" + reportId).update({ status: newStatus });
-            fetchReports();
+
+            // Fetch reporter UID and FCM token
+            const reportSnap = await db.ref("reports/" + reportId).get();
+            if (!reportSnap.exists()) return;
+
+            const reporterId = reportSnap.val().reporter;
+            const userSnap = await db.ref(`users/${reporterId}`).get();
+            if (!userSnap.exists()) return;
+
+            const fcmToken = userSnap.val().fcmToken;
+            if (!fcmToken) return;
+
+            // Determine message
+            let title = "";
+            let body = "";
+            let iconType = "";
+
+            switch (newStatus) {
+                case "Rejected":
+                    title = "Report Rejected";
+                    body = "Your report has been rejected by the admin.";
+                    iconType = "error"; // for pop-up display in app
+                    break;
+                case "Respond":
+                    title = "Report Verified - On Route";
+                    body = "Your report is verified and help is on the way.";
+                    iconType = "success";
+                    break;
+                case "onRoute":
+                    title = "On Route";
+                    body = "Responders are on route to your location.";
+                    iconType = "info";
+                    break;
+                case "Responded":
+                    title = "Responded";
+                    body = "Your report has been addressed.";
+                    iconType = "success";
+                    break;
+                default:
+                    title = "Report Update";
+                    body = `Your report status changed to ${newStatus}.`;
+            }
+
+            // Call your Python FCM endpoint
+            await fetch("/send_status_notification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    token: fcmToken,
+                    title,
+                    body,
+                    data: { reportId, status: newStatus, iconType }
+                })
+            });
+
         } catch (err) {
             console.error("Error updating status:", err);
         }
@@ -113,11 +180,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ reportId })
             });
             const result = await response.json();
-            if (result.success) {
-                alert("Report publicized & notifications sent!");
-            } else {
-                alert("Error publicizing report: " + result.error);
-            }
+            if (result.success) alert("Report publicized & notifications sent!");
+            else alert("Error publicizing report: " + result.error);
         } catch (err) {
             console.error("Error calling publicize_report endpoint:", err);
             alert("Failed to publicize report.");
@@ -153,9 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const usersSnap = await db.ref("users").get();
 
                 if (!reportsSnap.exists()) {
-                    reportsTableBody.innerHTML = `
-                        <tr><td colspan="8" style="text-align:center;">No reports found</td></tr>
-                    `;
+                    reportsTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No reports found</td></tr>`;
                     return;
                 }
 
@@ -191,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (match) {
                             lat = match[1];
                             lng = match[2];
-                            locationText = `${lat}, ${lng}`;
+                            locationText = await getAddressFromCoords(lat, lng);
                         } else {
                             locationText = loc;
                         }
@@ -251,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <td>${org}</td>
                             <td>${imageHtml}</td>
                             <td>${contact}</td>
-                            <td>${lat && lng ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>` : locationText}</td>
+                            <td>${lat && lng ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${locationText}</a>` : locationText}</td>
                             <td>${statusHtml}</td>
                         </tr>
                     `;
@@ -275,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 // ---------------------------
-                // CLICK MODAL (Reporter Info + Report Details)
+                // CLICK MODAL (Reporter Info + Report Details + Emergency Contacts)
                 // ---------------------------
                 document.querySelectorAll(".reporter-name").forEach(span => {
                     span.addEventListener("click", async (e) => {
@@ -283,6 +345,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         const snap = await db.ref("users/" + uid).get();
                         if (!snap.exists()) return;
                         const u = snap.val();
+
+                        // Fetch emergency contacts
+                        const contactsSnap = await db.ref(`users/${uid}/emergencyContacts`).get();
+                        let contactsHtml = "<em>No emergency contacts</em>";
+                        if (contactsSnap.exists()) {
+                            const contacts = contactsSnap.val();
+                            contactsHtml = "<ul>";
+                            for (const cid in contacts) {
+                                contactsHtml += `<li>${contacts[cid].name} — ${contacts[cid].number}</li>`;
+                            }
+                            contactsHtml += "</ul>";
+                        }
 
                         const emergency = e.target.dataset.emergency;
                         const description = e.target.dataset.description;
@@ -293,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         let locationHtml = locationText;
                         if (lat && lng) {
-                            locationHtml = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${lat}, ${lng}</a>`;
+                            locationHtml = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${locationText}</a>`;
                         }
 
                         modalContent.innerHTML = `
@@ -304,8 +378,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             <strong>Home Address:</strong> ${u.homeAddress || "N/A"}<br>
                             <strong>Present Address:</strong> ${u.presentAddress || "N/A"}<br><br>
 
+                            <strong>Emergency Contacts</strong><br>
+                            ${contactsHtml}<br>
+
                             <strong>Report Info</strong><br>
-                            <strong>Emergency:</strong> ${emergency}<br>
+                            <strong>Emergency:</strong> ${emergency}<br> 
                             <strong>Description:</strong> ${description}<br>
                             <strong>Location:</strong> ${locationHtml}<br>
                             ${imageUrl ? `<img src="${imageUrl}" alt="Report Image">` : ""}

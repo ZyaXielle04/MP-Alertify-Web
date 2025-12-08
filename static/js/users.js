@@ -7,12 +7,12 @@ window.addEventListener("DOMContentLoaded", () => {
     hamburger.addEventListener("click", () => sideNav.classList.toggle("closed"));
   }
 
-  function initDashboard(role) {
+  async function initDashboard(role) {
     const usersContainer = document.getElementById("usersContainer");
     const usersRef = db.ref("users");
 
     // Only users with role "user"
-    usersRef.orderByChild("role").equalTo("user").on("value", snapshot => {
+    usersRef.orderByChild("role").equalTo("user").on("value", async snapshot => {
       const users = snapshot.val();
       usersContainer.innerHTML = "";
 
@@ -21,12 +21,24 @@ window.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      Object.keys(users).forEach(uid => {
+      for (const uid of Object.keys(users)) {
         const user = users[uid];
-        const card = document.createElement("div");
-        card.classList.add("user-card");
+
+        // Fetch Firebase Auth user record to check email verification
+        let emailVerified = false;
+        try {
+          const token = await firebase.auth().currentUser.getIdToken(/* forceRefresh */ true);
+          const response = await fetch(`/get_user_auth?uid=${uid}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const authData = await response.json();
+          emailVerified = authData.emailVerified || false;
+        } catch (err) {
+          console.warn("Failed to fetch auth info for UID:", uid, err);
+        }
 
         const verifiedIcon = user.isApproved ? " ✅" : "";
+        const emailIcon = emailVerified ? " 📧" : "";
         const disabledText = user.disabled ? " (Disabled)" : "";
 
         // Dynamically render buttons based on approval status
@@ -38,14 +50,15 @@ window.addEventListener("DOMContentLoaded", () => {
           actionButtons += `<button class="card-btn disable-btn">${user.disabled ? 'Enable' : 'Disable'}</button>`;
         }
 
+        const card = document.createElement("div");
+        card.classList.add("user-card");
         card.innerHTML = `
-          <h3>${user.username || '-'}${verifiedIcon}${disabledText}</h3>
+          <h3>${user.username || '-'}${verifiedIcon}${emailIcon}${disabledText}</h3>
           <p><strong>Name:</strong> ${user.name || '-'}</p>
           <p><strong>Email:</strong> ${user.email || '-'}</p>
           <p><strong>UID:</strong> ${uid}</p>
           ${actionButtons}
         `;
-
         usersContainer.appendChild(card);
 
         // ---------- VIEW DETAILS ----------
@@ -99,7 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 try {
                   await db.ref(`users/${uid}/isApproved`).set(true);
                   const usernameElem = card.querySelector("h3");
-                  usernameElem.textContent = `${user.username} ✅`;
+                  usernameElem.textContent = `${user.username} ✅${emailVerified ? " 📧" : ""}`;
                   approveBtn.remove();
                   const resubmitBtn = card.querySelector(".resubmit-btn");
                   if (resubmitBtn) resubmitBtn.remove();
@@ -168,11 +181,10 @@ window.addEventListener("DOMContentLoaded", () => {
                   });
                   const data = await res.json();
                   if (data.success) {
-                    // Update UI immediately
                     user.disabled = !user.disabled;
                     disableBtn.textContent = user.disabled ? "Enable" : "Disable";
                     const usernameElem = card.querySelector("h3");
-                    usernameElem.textContent = `${user.username}${user.isApproved ? " ✅" : ""}${user.disabled ? " (Disabled)" : ""}`;
+                    usernameElem.textContent = `${user.username}${user.isApproved ? " ✅" : ""}${emailVerified ? " 📧" : ""}${user.disabled ? " (Disabled)" : ""}`;
                     Swal.fire('Success!', data.message, 'success');
                   } else {
                     Swal.fire('Error!', data.error, 'error');
@@ -186,9 +198,9 @@ window.addEventListener("DOMContentLoaded", () => {
           });
         }
 
-      });
-    });
-  }
+      } // end for each user
+    }); // end on value
+  } // end initDashboard
 
   window.initDashboard = initDashboard;
 

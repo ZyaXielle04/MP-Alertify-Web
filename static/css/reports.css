@@ -1,15 +1,22 @@
+/* ---------------------------
+   Reports Table
+---------------------------- */
 .reports-table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
+  table-layout: fixed; /* Fix column widths */
 }
 
 .reports-table th, .reports-table td {
   padding: 12px;
   border-bottom: 1px solid #eee;
   text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal; /* allow text to wrap vertically */
 }
 
 .reports-table th {
@@ -17,6 +24,15 @@
   color: white;
   font-weight: 600;
 }
+
+.reports-table th:nth-child(1), .reports-table td:nth-child(1) { width: 150px; }
+.reports-table th:nth-child(2), .reports-table td:nth-child(2) { width: 120px; }
+.reports-table th:nth-child(3), .reports-table td:nth-child(3) { width: 200px; }
+.reports-table th:nth-child(4), .reports-table td:nth-child(4) { width: 120px; }
+.reports-table th:nth-child(5), .reports-table td:nth-child(5) { width: 90px; }
+.reports-table th:nth-child(6), .reports-table td:nth-child(6) { width: 120px; }
+.reports-table th:nth-child(7), .reports-table td:nth-child(7) { width: 150px; }
+.reports-table th:nth-child(8), .reports-table td:nth-child(8) { width: 180px; }
 
 .reports-table tr:hover {
   background: #f5f5f5;
@@ -27,48 +43,112 @@
   height: 80px;
   object-fit: cover;
   border-radius: 8px;
+  transition: transform 0.25s ease-in-out;
+  cursor: pointer;
 }
 
+.reports-table img:hover {
+  transform: scale(2.5);
+  position: relative;
+  z-index: 9999;
+}
+
+/* ---------------------------
+   Buttons
+---------------------------- */
 .btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    margin-top: 6px;
-    cursor: pointer;
-    color: white;
-    font-size: 12px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  margin-top: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 12px;
 }
 
 .btn.gray { background: #7f8c8d; }
 .btn.red { background: #e74c3c; }
-.btn.yellow { background: #f1c40f; color:black; }
+.btn.yellow { background: #f1c40f; color: black; }
 .btn.blue { background: #3498db; }
 .btn.green { background: #2ecc71; }
+.btn.purple { background: #9b59b6; }
 
+/* ---------------------------
+   Reporter Name
+---------------------------- */
 .reporter-name {
-    cursor: pointer;
-    text-decoration: underline;
+  cursor: pointer;
+  text-decoration: underline;
 }
 .reporter-name:hover {
-    color: #2980b9;
+  color: #2980b9;
 }
 
+/* ---------------------------
+   Profile / Report Modal
+---------------------------- */
 .profile-modal {
-    position: absolute;
-    background: white;
-    border: 1px solid #ccc;
-    padding: 15px;
-    width: 260px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    z-index: 9999;
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 15px;
+  width: 260px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  z-index: 9999;
 }
+
 .hidden {
-    display: none;
+  display: none;
 }
+
 .profile-content img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ---------------------------
+   Reporter Modal
+---------------------------- */
+#reporterModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  max-height: 70vh;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  z-index: 10000;
+  display: none;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#reporterModal img {
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+
+#reporterModalClose {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto; /* horizontal scroll if needed */
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  background: #fff;
+  padding: 10px;
 }

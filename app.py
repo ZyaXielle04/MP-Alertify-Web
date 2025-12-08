@@ -212,6 +212,37 @@ def publicize_report():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ---------------------------------------------------------
+# SEND REPORT STATUS NOTIFICATION TO USER
+# ---------------------------------------------------------
+@app.route("/send_status_notification", methods=["POST"])
+def send_status_notification():
+    """
+    Expects JSON payload:
+    {
+        "token": "<user_fcm_token>",
+        "title": "<notification title>",
+        "body": "<notification body>",
+        "data": { "reportId": "<id>", "status": "<status>", "iconType": "<success/error/info>" }
+    }
+    """
+    data = request.json
+    token = data.get("token")
+    title = data.get("title")
+    body = data.get("body")
+    payload = data.get("data", {})
+
+    if not token or not title or not body:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    try:
+        response = send_fcm_v1(token=token, title=title, body=body, data_payload=payload)
+        if response.status_code == 200:
+            return jsonify({"success": True, "message": "Notification sent"})
+        else:
+            return jsonify({"success": False, "error": response.text}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ---------------------------------------------------------
 # DISABLE USER
@@ -232,6 +263,22 @@ def disable_user():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ---------------------------------------------------------
+# CHECK EMAIL VERIFICATION STATUS
+# ---------------------------------------------------------
+@app.route("/get_user_auth")
+def get_user_auth():
+    uid = request.args.get("uid")
+    if not uid:
+        return jsonify({"error": "Missing uid"}), 400
+    try:
+        user_record = auth.get_user(uid)
+        return jsonify({
+            "uid": uid,
+            "emailVerified": user_record.email_verified
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ---------------------------
 # Run server
