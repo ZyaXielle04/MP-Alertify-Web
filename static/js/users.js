@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", () => {
         // Fetch Firebase Auth user record to check email verification
         let emailVerified = false;
         try {
-          const token = await firebase.auth().currentUser.getIdToken(/* forceRefresh */ true);
+          const token = await firebase.auth().currentUser.getIdToken(true);
           const response = await fetch(`/get_user_auth?uid=${uid}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -39,6 +39,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         const verifiedIcon = user.isApproved ? " ✅" : "";
         const emailIcon = emailVerified ? " 📧" : "";
+        const warnIcon = user.warnCount >= 3 ? ` <span style="color:red;">⚠️</span>` : "";
         const disabledText = user.disabled ? " (Disabled)" : "";
 
         // Dynamically render buttons based on approval status
@@ -53,7 +54,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const card = document.createElement("div");
         card.classList.add("user-card");
         card.innerHTML = `
-          <h3>${user.username || '-'}${verifiedIcon}${emailIcon}${disabledText}</h3>
+          <h3>${user.username || '-'}${verifiedIcon}${emailIcon}${warnIcon}${disabledText}</h3>
           <p><strong>Name:</strong> ${user.name || '-'}</p>
           <p><strong>Email:</strong> ${user.email || '-'}</p>
           <p><strong>UID:</strong> ${uid}</p>
@@ -78,6 +79,7 @@ window.addEventListener("DOMContentLoaded", () => {
                   <p><strong>Contact:</strong> ${user.contact}</p>
                   <p><strong>Home Address:</strong> ${user.homeAddress}</p>
                   <p><strong>Present Address:</strong> ${user.presentAddress}</p>
+                  <p><strong>Warn Count:</strong> ${user.warnCount || 0}</p>
                 </div>
                 <hr/>
                 <div class="image-group">
@@ -90,8 +92,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 </div>
               </div>
             `,
-            confirmButtonText: "Close",
-            showCancelButton: false
+            confirmButtonText: "Close"
           });
         });
 
@@ -112,13 +113,13 @@ window.addEventListener("DOMContentLoaded", () => {
                 try {
                   await db.ref(`users/${uid}/isApproved`).set(true);
                   const usernameElem = card.querySelector("h3");
-                  usernameElem.textContent = `${user.username} ✅${emailVerified ? " 📧" : ""}`;
+                  usernameElem.innerHTML =
+                    `${user.username} ✅${emailVerified ? " 📧" : ""}${warnIcon}${disabledText}`;
                   approveBtn.remove();
                   const resubmitBtn = card.querySelector(".resubmit-btn");
                   if (resubmitBtn) resubmitBtn.remove();
                   Swal.fire('Approved!', `${user.username} has been approved.`, 'success');
                 } catch (err) {
-                  console.error(err);
                   Swal.fire('Error!', 'Failed to approve user.', 'error');
                 }
               }
@@ -149,7 +150,6 @@ window.addEventListener("DOMContentLoaded", () => {
                     "success"
                   );
                 } catch (err) {
-                  console.error(err);
                   Swal.fire("Error!", "Failed to update user data.", "error");
                 }
               }
@@ -173,7 +173,6 @@ window.addEventListener("DOMContentLoaded", () => {
             }).then(async (result) => {
               if (result.isConfirmed) {
                 try {
-                  // Call your Python backend
                   const res = await fetch("https://mp-alertify-web.onrender.com/disable_user", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -182,15 +181,17 @@ window.addEventListener("DOMContentLoaded", () => {
                   const data = await res.json();
                   if (data.success) {
                     user.disabled = !user.disabled;
-                    disableBtn.textContent = user.disabled ? "Enable" : "Disable";
+
                     const usernameElem = card.querySelector("h3");
-                    usernameElem.textContent = `${user.username}${user.isApproved ? " ✅" : ""}${emailVerified ? " 📧" : ""}${user.disabled ? " (Disabled)" : ""}`;
+                    usernameElem.innerHTML =
+                      `${user.username}${user.isApproved ? " ✅" : ""}${emailVerified ? " 📧" : ""}${warnIcon}${user.disabled ? " (Disabled)" : ""}`;
+
+                    disableBtn.textContent = user.disabled ? "Enable" : "Disable";
                     Swal.fire('Success!', data.message, 'success');
                   } else {
                     Swal.fire('Error!', data.error, 'error');
                   }
                 } catch (err) {
-                  console.error(err);
                   Swal.fire('Error!', 'Failed to update user status.', 'error');
                 }
               }

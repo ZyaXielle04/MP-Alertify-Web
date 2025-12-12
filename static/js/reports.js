@@ -54,11 +54,43 @@ document.addEventListener("DOMContentLoaded", () => {
             font-weight: bold;
             font-size: 18px;
         }
+
+        /* Reject confirmation popup */
+        #rejectConfirmPopup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 420px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 6px 28px rgba(0,0,0,0.35);
+            z-index: 20000;
+            display: none;
+            padding: 16px;
+        }
+        #rejectConfirmPopup h4 { margin: 0 0 8px 0; }
+        #rejectConfirmPopup textarea {
+            width: 100%;
+            min-height: 80px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            resize: vertical;
+        }
+        #rejectConfirmPopup .btn-row { display:flex; gap:8px; justify-content:flex-end; }
+        #rejectConfirmPopup .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer; }
+        #rejectCancelBtn { background: #e74c3c; color:white; }
+        #rejectBtn { background: #9b59b6; color:white; }
+        #rejectWarnBtn { background: #f39c12; color:white; }
+        #rejectReasonLabel { font-size: 13px; color:#333; margin-bottom:6px; display:block; }
     `;
     document.head.appendChild(imgStyle);
 
     // --------------------------------------------------------
-    // Modal container
+    // Modal container (reporter details)
     // --------------------------------------------------------
     const modal = document.createElement("div");
     modal.id = "reporterModal";
@@ -73,6 +105,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modalClose.addEventListener("click", () => {
         modal.style.display = "none";
+    });
+
+    // --------------------------------------------------------
+    // Reject Confirmation Popup (created once)
+    // --------------------------------------------------------
+    const rejectPopup = document.createElement("div");
+    rejectPopup.id = "rejectConfirmPopup";
+    rejectPopup.innerHTML = `
+        <h4>Reject Report?</h4>
+        <label id="rejectReasonLabel">Reason (optional):</label>
+        <textarea id="rejectReasonInput" placeholder="Provide a reason (optional)"></textarea>
+        <div class="btn-row">
+            <button id="rejectCancelBtn" class="btn">Cancel</button>
+            <button id="rejectBtn" class="btn">Reject</button>
+            <button id="rejectWarnBtn" class="btn">Reject & Warn</button>
+        </div>
+    `;
+    document.body.appendChild(rejectPopup);
+
+    const rejectReasonInput = document.getElementById("rejectReasonInput");
+    const rejectCancelBtn = document.getElementById("rejectCancelBtn");
+    const rejectBtn = document.getElementById("rejectBtn");
+    const rejectWarnBtn = document.getElementById("rejectWarnBtn");
+
+    // Current reportId being acted on (set when opening popup)
+    let currentRejectReportId = null;
+
+    // Close handler
+    rejectCancelBtn.addEventListener("click", () => {
+        rejectReasonInput.value = "";
+        currentRejectReportId = null;
+        rejectPopup.style.display = "none";
     });
 
     // ---------------------------
@@ -103,11 +167,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ---------------------------
-    // Update Report Status
+    // Update Report Status (now supports options: reason, warn, saveReason)
     // ---------------------------
-    async function updateStatus(reportId, newStatus) {
+    async function updateStatus(reportId, newStatus, options = {}) {
+        // options: { reason: string|null, warn: boolean, saveReason: boolean }
+        options = options || {};
+        const reason = options.reason ? String(options.reason).trim() : null;
+        const warn = !!options.warn;
+        const saveReason = options.saveReason === undefined ? true : !!options.saveReason; // we chose C: save reason
+
         try {
+            // Update status
             await db.ref("reports/" + reportId).update({ status: newStatus });
+
+            // If we should save the reason to the report object (choice C)
+            if (newStatus === "Rejected" && reason && saveReason) {
+                await db.ref(`reports/${reportId}/rejectReason`).set(reason);
+            }
 
             // Fetch reporter UID and FCM token
             const reportSnap = await db.ref("reports/" + reportId).get();
@@ -118,7 +194,16 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!userSnap.exists()) return;
 
             const fcmToken = userSnap.val().fcmToken;
-            if (!fcmToken) return;
+
+            // If warn flag is set, increment warnCount for reporter
+            if (warn && reporterId) {
+                try {
+                    const warnRef = db.ref(`users/${reporterId}/warnCount`);
+                    await warnRef.transaction(current => (current || 0) + 1);
+                } catch (werr) {
+                    console.error("Failed to increment warnCount:", werr);
+                }
+            }
 
             // Determine message
             let title = "";
@@ -129,6 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 case "Rejected":
                     title = "Report Rejected";
                     body = "Your report has been rejected by the admin.";
+                    if (reason) body += ` Reason: ${reason}`;
                     iconType = "error";
                     break;
                 case "Respond":
@@ -151,17 +237,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     body = `Your report status changed to ${newStatus}.`;
             }
 
-            // Call your Python FCM endpoint
-            await fetch("/send_status_notification", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    token: fcmToken,
-                    title,
-                    body,
-                    data: { reportId, status: newStatus, iconType }
-                })
-            });
+            // Call your Python FCM endpoint if token exists
+            if (fcmToken) {
+                try {
+                    await fetch("/send_status_notification", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            token: fcmToken,
+                            title,
+                            body,
+                            data: { reportId, status: newStatus, iconType }
+                        })
+                    });
+                } catch (err) {
+                    console.error("Error sending status notification:", err);
+                }
+            }
 
         } catch (err) {
             console.error("Error updating status:", err);
@@ -328,7 +420,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         const reportId = btn.dataset.id;
                         const action = btn.dataset.action;
 
-                        if (action === "reject") updateStatus(reportId, "Rejected");
+                        if (action === "reject") {
+                            // open reject confirmation modal
+                            openRejectModal(reportId);
+                            return;
+                        }
                         if (action === "respond") updateStatus(reportId, "Respond");
                         if (action === "onroute") updateStatus(reportId, "onRoute");
                         if (action === "responded") updateStatus(reportId, "Responded");
@@ -394,4 +490,52 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // ---------------------------
+    // Open Reject Modal
+    // ---------------------------
+    function openRejectModal(reportId) {
+        currentRejectReportId = reportId;
+        rejectReasonInput.value = "";
+
+        // show popup
+        rejectPopup.style.display = "block";
+
+        // Attach click handlers (we attach fresh handlers to avoid duplicate listeners)
+        const onReject = async () => {
+            const reason = rejectReasonInput.value.trim();
+            // Just reject
+            await updateStatus(currentRejectReportId, "Rejected", { reason: reason || null, warn: false, saveReason: true });
+            cleanupRejectHandlers();
+            rejectPopup.style.display = "none";
+            currentRejectReportId = null;
+        };
+
+        const onRejectWarn = async () => {
+            const reason = rejectReasonInput.value.trim();
+            // Reject and warn
+            await updateStatus(currentRejectReportId, "Rejected", { reason: reason || null, warn: true, saveReason: true });
+            cleanupRejectHandlers();
+            rejectPopup.style.display = "none";
+            currentRejectReportId = null;
+        };
+
+        function cleanupRejectHandlers() {
+            rejectBtn.removeEventListener("click", onReject);
+            rejectWarnBtn.removeEventListener("click", onRejectWarn);
+            rejectCancelBtn.removeEventListener("click", onCancel);
+        }
+
+        const onCancel = () => {
+            cleanupRejectHandlers();
+            rejectPopup.style.display = "none";
+            currentRejectReportId = null;
+        };
+
+        // Make sure we don't double-bind
+        rejectBtn.addEventListener("click", onReject);
+        rejectWarnBtn.addEventListener("click", onRejectWarn);
+        rejectCancelBtn.addEventListener("click", onCancel);
+    }
+
 });
