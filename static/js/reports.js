@@ -54,46 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
             font-weight: bold;
             font-size: 18px;
         }
-
-        #customSMSPopup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90%;
-            max-width: 400px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 20000;
-            display: none;
-            padding: 20px;
-        }
-
-        #customSMSPopup textarea {
-            width: 100%;
-            min-height: 80px;
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            resize: vertical;
-        }
-
-        #customSMSPopup button {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        #customSMSClose {
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            cursor: pointer;
-            font-weight: bold;
-        }
     `;
     document.head.appendChild(imgStyle);
 
@@ -113,54 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     modalClose.addEventListener("click", () => {
         modal.style.display = "none";
-    });
-
-    // --------------------------------------------------------
-    // Custom SMS Popup
-    // --------------------------------------------------------
-    const smsPopup = document.createElement("div");
-    smsPopup.id = "customSMSPopup";
-    smsPopup.innerHTML = `
-        <span id="customSMSClose">&times;</span>
-        <h4>Send Custom SMS</h4>
-        <textarea id="customSMSMessage" placeholder="Type your message here..."></textarea>
-        <button id="sendSMSBtn" style="background:#9b59b6; color:white;">Send</button>
-    `;
-    document.body.appendChild(smsPopup);
-
-    const smsClose = document.getElementById("customSMSClose");
-    const smsTextarea = document.getElementById("customSMSMessage");
-    const sendSMSBtn = document.getElementById("sendSMSBtn");
-
-    let currentContacts = []; // Emergency contacts of currently opened reporter
-
-    smsClose.addEventListener("click", () => {
-        smsPopup.style.display = "none";
-        smsTextarea.value = "";
-    });
-
-    sendSMSBtn.addEventListener("click", async () => {
-        const message = smsTextarea.value.trim();
-        if (!message) return alert("Please enter a message.");
-
-        for (const contact of currentContacts) {
-            try {
-                await fetch("/send_sms", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        to: contact.number,
-                        message
-                    })
-                });
-            } catch (err) {
-                console.error("Failed to send SMS to", contact.number, err);
-            }
-        }
-
-        alert("SMS sent successfully!");
-        smsPopup.style.display = "none";
-        smsTextarea.value = "";
     });
 
     // ---------------------------
@@ -197,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             await db.ref("reports/" + reportId).update({ status: newStatus });
 
+            // Fetch reporter UID and FCM token
             const reportSnap = await db.ref("reports/" + reportId).get();
             if (!reportSnap.exists()) return;
 
@@ -207,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const fcmToken = userSnap.val().fcmToken;
             if (!fcmToken) return;
 
+            // Determine message
             let title = "";
             let body = "";
             let iconType = "";
@@ -237,6 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     body = `Your report status changed to ${newStatus}.`;
             }
 
+            // Call your Python FCM endpoint
             await fetch("/send_status_notification", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -254,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ---------------------------
-    // Publicize Report
+    // Publicize Report (No SMS)
     // ---------------------------
     async function publicizeReport(reportId) {
         if (!reportId) return;
@@ -262,14 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const reportSnap = await db.ref("reports/" + reportId).get();
             if (!reportSnap.exists()) return alert("Report not found");
 
-            const reporterId = reportSnap.val().reporter;
-
-            const contactsSnap = await db.ref(`users/${reporterId}/emergencyContacts`).get();
-            let contacts = [];
-            if (contactsSnap.exists()) {
-                contacts = Object.values(contactsSnap.val());
-            }
-
+            // Call your backend endpoint to publicize report
             const response = await fetch("/publicize_report", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -279,23 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (result.success) {
                 alert("Report publicized & notifications sent!");
-
-                if (contacts.length > 0) {
-                    for (const contact of contacts) {
-                        try {
-                            await fetch("/send_sms", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    to: contact.number,
-                                    message: `Emergency Alert: ${reportSnap.val().emergency} reported by ${reportSnap.val().reporterName || "someone"}. Description: ${reportSnap.val().additionalMessage || "No description"}`
-                                })
-                            });
-                        } catch (smsErr) {
-                            console.error("Failed to send SMS to", contact.number, smsErr);
-                        }
-                    }
-                }
             } else {
                 alert("Error publicizing report: " + result.error);
             }
@@ -355,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const description = r.additionalMessage || "No description";
                     const imageUrl = r.imageUrl || "";
 
+                    // LOCATION
                     let locationText = "N/A";
                     let lat = "";
                     let lng = "";
@@ -374,6 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
 
+                    // STATUS BUTTONS
                     let statusButtons = "";
                     switch (r.status) {
                         case "pending":
@@ -429,9 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     reportsTableBody.insertAdjacentHTML("afterbegin", row);
                 }
 
-                // ---------------------------
                 // STATUS BUTTON HANDLER
-                // ---------------------------
                 document.querySelectorAll(".btn").forEach(btn => {
                     btn.addEventListener("click", () => {
                         const reportId = btn.dataset.id;
@@ -445,9 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 });
 
-                // ---------------------------
-                // CLICK MODAL (Reporter Info + Report Details + Emergency Contacts + SMS)
-                // ---------------------------
+                // MODAL DISPLAY
                 document.querySelectorAll(".reporter-name").forEach(span => {
                     span.addEventListener("click", async (e) => {
                         const uid = e.target.dataset.id;
@@ -455,12 +344,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (!snap.exists()) return;
                         const u = snap.val();
 
+                        // Fetch emergency contacts (just display, no SMS)
                         const contactsSnap = await db.ref(`users/${uid}/emergencyContacts`).get();
                         let contactsHtml = "<em>No emergency contacts</em>";
-                        currentContacts = [];
                         if (contactsSnap.exists()) {
                             const contacts = contactsSnap.val();
-                            currentContacts = Object.values(contacts);
                             contactsHtml = "<ul>";
                             for (const cid in contacts) {
                                 contactsHtml += `<li>${contacts[cid].name} — ${contacts[cid].number}</li>`;
@@ -491,12 +379,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <strong>Emergency Contacts</strong><br>
                             ${contactsHtml}<br>
 
-                            <button id="sendCustomSMSBtn" 
-                                    style="margin-top:10px; padding:8px 12px; background:#9b59b6; color:white; border:none; border-radius:6px; cursor:pointer;">
-                                Send Custom SMS
-                            </button>
-                            <br><br>
-
                             <strong>Report Info</strong><br>
                             <strong>Emergency:</strong> ${emergency}<br> 
                             <strong>Description:</strong> ${description}<br>
@@ -504,11 +386,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             ${imageUrl ? `<img src="${imageUrl}" alt="Report Image">` : ""}
                         `;
                         modal.style.display = "block";
-
-                        const sendCustomSMSBtn = document.getElementById("sendCustomSMSBtn");
-                        sendCustomSMSBtn.addEventListener("click", () => {
-                            smsPopup.style.display = "block";
-                        });
                     });
                 });
 

@@ -72,24 +72,6 @@ def send_fcm_v1(token, title, body, data_payload={}):
     print("FCM HTTP v1 Response:", response.text)
     return response
 
-
-# ======================================================
-# SEND SMS VIA TEXTBELT
-# ======================================================
-def send_sms(number, message):
-    try:
-        resp = requests.post('https://textbelt.com/text', {
-            'phone': number,
-            'message': message,
-            'key': 'textbelt'  # free key
-        })
-        print("TextBelt response:", resp.json())
-        return resp.json()
-    except Exception as e:
-        print("TextBelt error:", e)
-        return None
-
-
 # ---------------------------
 # ROOT ROUTE
 # ---------------------------
