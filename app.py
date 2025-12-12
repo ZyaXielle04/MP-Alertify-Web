@@ -116,7 +116,7 @@ def register_fcm_token():
 
 
 # ---------------------------------------------------------
-# PUBLICIZE REPORT (Send Notifications + SMS)
+# PUBLICIZE REPORT (Send Notifications ONLY, no SMS)
 # ---------------------------------------------------------
 @app.route("/publicize_report", methods=["POST"])
 def publicize_report():
@@ -200,20 +200,6 @@ def publicize_report():
             )
             if response.status_code != 200:
                 print("FCM v1 Error:", response.text)
-
-        # -----------------------------
-        # Notify emergency contacts via SMS
-        # -----------------------------
-        reporter_id = report.get("reporter")
-        if reporter_id:
-            contacts_snap = db.reference(f"users/{reporter_id}/emergencyContacts").get()
-            if contacts_snap:
-                contacts = contacts_snap
-                for cid, contact_info in contacts.items():
-                    number = contact_info.get("number")
-                    if number:
-                        sms_message = f"Emergency Alert: {main_message}\nLocation: {location}\nReported: {timestamp_str}"
-                        send_sms(number, sms_message)
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
