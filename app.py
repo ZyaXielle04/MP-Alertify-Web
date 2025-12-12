@@ -73,6 +73,23 @@ def send_fcm_v1(token, title, body, data_payload={}):
     return response
 
 
+# ======================================================
+# SEND SMS VIA TEXTBELT
+# ======================================================
+def send_sms(number, message):
+    try:
+        resp = requests.post('https://textbelt.com/text', {
+            'phone': number,
+            'message': message,
+            'key': 'textbelt'  # free key
+        })
+        print("TextBelt response:", resp.json())
+        return resp.json()
+    except Exception as e:
+        print("TextBelt error:", e)
+        return None
+
+
 # ---------------------------
 # ROOT ROUTE
 # ---------------------------
@@ -117,7 +134,7 @@ def register_fcm_token():
 
 
 # ---------------------------------------------------------
-# PUBLICIZE REPORT (Send Notifications)
+# PUBLICIZE REPORT (Send Notifications + SMS)
 # ---------------------------------------------------------
 @app.route("/publicize_report", methods=["POST"])
 def publicize_report():
@@ -174,21 +191,17 @@ def publicize_report():
             timestamp_str = "Unknown"
 
         # -----------------------------
-        # Combine everything for notification body
+        # Notification body
         # -----------------------------
         body_message = f"{main_message}\nLocation: {location}\nReported: {timestamp_str}"
-
         title = "MP Alertify - Emergency Report"
 
         # -----------------------------
-        # Get all user tokens
+        # Send push notifications (FCM)
         # -----------------------------
         users = db.reference("users").get()
         tokens = [info.get("fcmToken") for uid, info in users.items() if info.get("fcmToken")]
 
-        # -----------------------------
-        # Send notifications using HTTP v1
-        # -----------------------------
         for token in tokens:
             payload = {
                 "reportId": report_id,
@@ -203,14 +216,28 @@ def publicize_report():
                 body=body_message,
                 data_payload=payload
             )
-
             if response.status_code != 200:
                 print("FCM v1 Error:", response.text)
+
+        # -----------------------------
+        # Notify emergency contacts via SMS
+        # -----------------------------
+        reporter_id = report.get("reporter")
+        if reporter_id:
+            contacts_snap = db.reference(f"users/{reporter_id}/emergencyContacts").get()
+            if contacts_snap:
+                contacts = contacts_snap
+                for cid, contact_info in contacts.items():
+                    number = contact_info.get("number")
+                    if number:
+                        sms_message = f"Emergency Alert: {main_message}\nLocation: {location}\nReported: {timestamp_str}"
+                        send_sms(number, sms_message)
 
         return jsonify({"success": True, "message": "Report publicized & notifications sent"})
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ---------------------------------------------------------
 # SEND REPORT STATUS NOTIFICATION TO USER
@@ -244,6 +271,7 @@ def send_status_notification():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # ---------------------------------------------------------
 # DISABLE USER
 # ---------------------------------------------------------
@@ -263,6 +291,7 @@ def disable_user():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # ---------------------------------------------------------
 # CHECK EMAIL VERIFICATION STATUS
 # ---------------------------------------------------------
@@ -279,6 +308,7 @@ def get_user_auth():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # ---------------------------
 # Run server

@@ -174,14 +174,53 @@ document.addEventListener("DOMContentLoaded", () => {
     async function publicizeReport(reportId) {
         if (!reportId) return;
         try {
+            // Fetch the report first
+            const reportSnap = await db.ref("reports/" + reportId).get();
+            if (!reportSnap.exists()) return alert("Report not found");
+
+            const reporterId = reportSnap.val().reporter;
+
+            // Fetch reporter's emergency contacts
+            const contactsSnap = await db.ref(`users/${reporterId}/emergencyContacts`).get();
+            let contacts = [];
+            if (contactsSnap.exists()) {
+                contacts = Object.values(contactsSnap.val()); // [{name, number}, ...]
+            }
+
+            // Call your backend endpoint to publicize report
             const response = await fetch("/publicize_report", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ reportId })
             });
             const result = await response.json();
-            if (result.success) alert("Report publicized & notifications sent!");
-            else alert("Error publicizing report: " + result.error);
+
+            if (result.success) {
+                alert("Report publicized & notifications sent!");
+
+                // ----------------------------
+                // Notify emergency contacts via SMS
+                // ----------------------------
+                if (contacts.length > 0) {
+                    for (const contact of contacts) {
+                        try {
+                            await fetch("/send_sms", {  // <-- Your backend endpoint for sending SMS
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    to: contact.number,
+                                    message: `Emergency Alert: ${reportSnap.val().emergency} reported by ${reportSnap.val().reporterName || "someone"}. Description: ${reportSnap.val().additionalMessage || "No description"}`
+                                })
+                            });
+                        } catch (smsErr) {
+                            console.error("Failed to send SMS to", contact.number, smsErr);
+                        }
+                    }
+                }
+            } else {
+                alert("Error publicizing report: " + result.error);
+            }
+
         } catch (err) {
             console.error("Error calling publicize_report endpoint:", err);
             alert("Failed to publicize report.");
@@ -317,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <td>${statusHtml}</td>
                         </tr>
                     `;
-                    reportsTableBody.insertAdjacentHTML("beforeend", row);
+                    reportsTableBody.insertAdjacentHTML("afterbegin", row);
                 }
 
                 // ---------------------------
