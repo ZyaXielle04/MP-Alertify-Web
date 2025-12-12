@@ -440,7 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (!snap.exists()) return;
                         const u = snap.val();
 
-                        // Fetch emergency contacts (just display, no SMS)
+                        // Fetch emergency contacts
                         const contactsSnap = await db.ref(`users/${uid}/emergencyContacts`).get();
                         let contactsHtml = "<em>No emergency contacts</em>";
                         if (contactsSnap.exists()) {
@@ -458,12 +458,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         const lat = e.target.dataset.lat;
                         const lng = e.target.dataset.lng;
                         const imageUrl = e.target.dataset.image;
+                        const reportTimestamp = e.target.dataset.timestamp || "N/A"; // make sure to add this when building rows
 
                         let locationHtml = locationText;
                         if (lat && lng) {
                             locationHtml = `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${locationText}</a>`;
                         }
 
+                        // Populate modal
                         modalContent.innerHTML = `
                             <strong>Reporter Info</strong><br>
                             <strong>Name:</strong> ${u.name || "Unknown"}<br>
@@ -479,11 +481,63 @@ document.addEventListener("DOMContentLoaded", () => {
                             <strong>Emergency:</strong> ${emergency}<br> 
                             <strong>Description:</strong> ${description}<br>
                             <strong>Location:</strong> ${locationHtml}<br>
-                            ${imageUrl ? `<img src="${imageUrl}" alt="Report Image">` : ""}<br><br>
+                            ${imageUrl ? `<img src="${imageUrl}" alt="Report Image" style="max-width:200px;">` : ""}<br><br>
 
                             <button id="exportPdfBtn" class="btn blue">Export Report as PDF</button>
                         `;
+
                         modal.style.display = "block";
+
+                        // Attach export PDF handler INSIDE modal population
+                        document.getElementById("exportPdfBtn").addEventListener("click", async () => {
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF();
+                            let y = 10;
+                            const exportTimestamp = new Date().toLocaleString();
+
+                            doc.setFontSize(14);
+                            doc.text("Reporter & Report Details", 10, y); y += 10;
+
+                            doc.setFontSize(12);
+                            doc.text(`Name: ${u.name || "Unknown"}`, 10, y); y += 7;
+                            doc.text(`Email: ${u.email || "No email"}`, 10, y); y += 7;
+                            doc.text(`Contact: ${u.contact || "N/A"}`, 10, y); y += 7;
+                            doc.text(`Home Address: ${u.homeAddress || "N/A"}`, 10, y); y += 7;
+                            doc.text(`Present Address: ${u.presentAddress || "N/A"}`, 10, y); y += 10;
+
+                            doc.text("Emergency Contacts:", 10, y); y += 7;
+                            if (contactsSnap.exists()) {
+                                for (const cid in contactsSnap.val()) {
+                                    const c = contactsSnap.val()[cid];
+                                    doc.text(`- ${c.name} — ${c.number}`, 10, y); y += 7;
+                                }
+                            } else {
+                                doc.text("No emergency contacts", 10, y); y += 7;
+                            }
+                            y += 5;
+
+                            doc.text("Report Info:", 10, y); y += 7;
+                            doc.text(`Emergency: ${emergency}`, 10, y); y += 7;
+                            doc.text(`Description: ${description}`, 10, y); y += 7;
+                            doc.text(`Location: ${locationText}`, 10, y); y += 7;
+                            doc.text(`Report Timestamp: ${reportTimestamp}`, 10, y); y += 7;
+                            doc.text(`Export Timestamp: ${exportTimestamp}`, 10, y); y += 10;
+
+                            // Add image if available
+                            if (imageUrl) {
+                                const img = new Image();
+                                img.crossOrigin = "anonymous";
+                                img.src = imageUrl;
+                                img.onload = function () {
+                                    const width = 180;
+                                    const height = (img.height * width) / img.width;
+                                    doc.addImage(img, "JPEG", 15, y, width, height);
+                                    doc.save(`report_${u.name}_${Date.now()}.pdf`);
+                                };
+                            } else {
+                                doc.save(`report_${u.name}_${Date.now()}.pdf`);
+                            }
+                        });
                     });
                 });
 
