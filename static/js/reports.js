@@ -342,9 +342,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     let locationText = "N/A";
                     let lat = "";
                     let lng = "";
-                    if (r.locationType === "HomeAddress") {
+                    if (r.locationType === "Home Address") {
                         locationText = user.homeAddress || "No Home Address";
-                    } else if (r.locationType === "PresentAddress") {
+                    } else if (r.locationType === "Present Address") {
                         locationText = user.presentAddress || "No Present Address";
                     } else {
                         let loc = r.location || "Unknown Location";
