@@ -277,6 +277,37 @@ def get_user_auth():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ---------------------------------------------------------
+# BIOMETRIC LOGIN (Firebase ID Token)
+# ---------------------------------------------------------
+@app.route("/biometric-login", methods=["POST"])
+def biometric_login():
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing token"}), 401
+
+    id_token = auth_header.replace("Bearer ", "")
+
+    try:
+        decoded = auth.verify_id_token(id_token)
+        uid = decoded["uid"]
+
+        # Optional: check disabled flag in DB
+        disabled = db.reference(f"users/{uid}/disabled").get()
+        if disabled:
+            return jsonify({"error": "User disabled"}), 403
+
+        user = db.reference(f"users/{uid}").get()
+
+        return jsonify({
+            "success": True,
+            "uid": uid,
+            "user": user
+        })
+
+    except Exception as e:
+        return jsonify({"error": "Invalid or expired token"}), 401
 
 # ---------------------------
 # Run server
