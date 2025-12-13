@@ -334,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     const name = user.name || "Unknown User";
                     const contact = user.contact || "N/A";
                     const emergency = r.emergency === "Others" ? r.otherEmergency : r.emergency;
-                    const org = r.organization || "N/A";
                     const description = r.additionalMessage || "No description";
                     const imageUrl = r.imageUrl || "";
 
