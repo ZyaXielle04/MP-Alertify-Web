@@ -404,7 +404,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             </td>
                             <td>${emergency}</td>
                             <td>${description}</td>
-                            <td>${org}</td>
                             <td>${imageHtml}</td>
                             <td>${contact}</td>
                             <td>${lat && lng ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${locationText}</a>` : locationText}</td>
