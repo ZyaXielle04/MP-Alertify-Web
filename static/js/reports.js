@@ -170,42 +170,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // Update Report Status (now supports options: reason, warn, saveReason)
     // ---------------------------
     async function updateStatus(reportId, newStatus, options = {}) {
-        // options: { reason: string|null, warn: boolean, saveReason: boolean }
-        options = options || {};
+        const customMessage = options.customMessage ? String(options.customMessage).trim() : null;
         const reason = options.reason ? String(options.reason).trim() : null;
         const warn = !!options.warn;
-        const saveReason = options.saveReason === undefined ? true : !!options.saveReason; // we chose C: save reason
+        const saveReason = options.saveReason === undefined ? true : !!options.saveReason;
 
         try {
-            // Update status
             await db.ref("reports/" + reportId).update({ status: newStatus });
 
-            // If we should save the reason to the report object (choice C)
+            // Save reject reason if applicable
             if (newStatus === "Rejected" && reason && saveReason) {
                 await db.ref(`reports/${reportId}/rejectReason`).set(reason);
             }
 
-            // Fetch reporter UID and FCM token
             const reportSnap = await db.ref("reports/" + reportId).get();
             if (!reportSnap.exists()) return;
-
             const reporterId = reportSnap.val().reporter;
+
             const userSnap = await db.ref(`users/${reporterId}`).get();
             if (!userSnap.exists()) return;
-
             const fcmToken = userSnap.val().fcmToken;
 
-            // If warn flag is set, increment warnCount for reporter
+            // Increment warnCount if needed
             if (warn && reporterId) {
-                try {
-                    const warnRef = db.ref(`users/${reporterId}/warnCount`);
-                    await warnRef.transaction(current => (current || 0) + 1);
-                } catch (werr) {
-                    console.error("Failed to increment warnCount:", werr);
-                }
+                await db.ref(`users/${reporterId}/warnCount`).transaction(current => (current || 0) + 1);
             }
 
-            // Determine message
+            // Determine default message
             let title = "";
             let body = "";
             let iconType = "";
@@ -237,22 +228,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     body = `Your report status changed to ${newStatus}.`;
             }
 
-            // Call your Python FCM endpoint if token exists
+            // Append admin's custom message if any
+            if (customMessage) body += `\nMessage from Admin: ${customMessage}`;
+
+            // Send notification
             if (fcmToken) {
-                try {
-                    await fetch("/send_status_notification", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            token: fcmToken,
-                            title,
-                            body,
-                            data: { reportId, status: newStatus, iconType }
-                        })
-                    });
-                } catch (err) {
-                    console.error("Error sending status notification:", err);
-                }
+                await fetch("/send_status_notification", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        token: fcmToken,
+                        title,
+                        body,
+                        data: { reportId, status: newStatus, iconType }
+                    })
+                });
             }
 
         } catch (err) {
@@ -423,9 +413,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             openRejectModal(reportId);
                             return;
                         }
-                        if (action === "respond") updateStatus(reportId, "Respond");
-                        if (action === "onroute") updateStatus(reportId, "onRoute");
-                        if (action === "responded") updateStatus(reportId, "Responded");
+                        if (action === "respond" || action === "onroute" || action === "responded") {
+                            // Ask admin for an optional message
+                            const customMessage = prompt("Add a custom message for the user (optional):", "");
+                            updateStatus(reportId, 
+                                        action === "respond" ? "Respond" : action === "onroute" ? "onRoute" : "Responded", 
+                                        { customMessage });
+                        }
                         if (action === "publicize") publicizeReport(reportId);
                     });
                 });
