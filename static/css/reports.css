@@ -152,3 +152,17 @@
   background: #fff;
   padding: 10px;
 }
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filter-bar select,
+.filter-bar input {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}

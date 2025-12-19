@@ -54,6 +54,33 @@
     <section class="dashboard-cards">
       <h2 style="margin-bottom: 15px;">All Reports</h2>
 
+      <div class="filter-bar">
+          <select id="dateFilter">
+              <option value="all">All Dates</option>
+              <option value="daily">Today</option>
+              <option value="weekly">This Week</option>
+              <option value="monthly">This Month</option>
+              <option value="yearly">This Year</option>
+              <option value="custom">Custom Range</option>
+          </select>
+
+          <input type="date" id="startDate" disabled>
+          <input type="date" id="endDate" disabled>
+
+          <select id="emergencyFilter">
+              <option value="all">All Emergencies</option>
+              <option value="Flood">Flood</option>
+              <option value="Landslide">Landslide</option>
+              <option value="Medical">Medical</option>
+              <option value="Road Accident">Road Accident</option>
+              <option value="Others">Others</option>
+          </select>
+
+          <button id="exportFilteredPdf" class="btn blue">
+              Export Filtered PDF
+          </button>
+      </div>
+
       <!-- Table Wrapper -->
       <div class="table-wrapper">
         <table id="reportsTable" class="reports-table">
