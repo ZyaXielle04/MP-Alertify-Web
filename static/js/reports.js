@@ -599,3 +599,108 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 });
+
+window.renderSingleReport = async function(reportId, r) {
+    const reportsTableBody = document.getElementById("reportsTableBody");
+
+    // Get user info
+    let user = {};
+    try {
+        const snap = await db.ref("users/" + r.reporter).get();
+        if (snap.exists()) user = snap.val();
+    } catch (err) {
+        console.error("Error fetching user:", err);
+    }
+
+    const name = user.name || "Unknown User";
+    const contact = user.contact || "N/A";
+    const emergency = r.emergency === "Others" ? r.otherEmergency : r.emergency;
+    const description = r.additionalMessage || "No description";
+    const imageUrl = r.imageUrl || "";
+
+    const reportTimestamp = r.timestamp
+        ? new Date(r.timestamp).toLocaleString()
+        : "N/A";
+
+    // LOCATION
+    let locationText = "N/A";
+    let lat = "";
+    let lng = "";
+    if (r.locationType === "Home Address") {
+        locationText = user.homeAddress || "No Home Address";
+    } else if (r.locationType === "Present Address") {
+        locationText = user.presentAddress || "No Present Address";
+    } else {
+        let loc = r.location || "Unknown Location";
+        const match = loc.match(/Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/);
+        if (match) {
+            lat = match[1];
+            lng = match[2];
+            locationText = await getAddressFromCoords(lat, lng);
+        } else {
+            locationText = loc;
+        }
+    }
+
+    // STATUS BUTTONS
+    let statusButtons = "";
+    switch (r.status) {
+        case "pending":
+            statusButtons = `<button class="btn gray" data-action="reject" data-id="${reportId}">Reject</button>
+                             <button class="btn yellow" data-action="respond" data-id="${reportId}">Respond</button>`;
+            break;
+        case "Respond":
+            statusButtons = `<button class="btn blue" data-action="onroute" data-id="${reportId}">On Route</button>`;
+            break;
+        case "onRoute":
+            statusButtons = `<button class="btn green" data-action="responded" data-id="${reportId}">Responded</button>`;
+            break;
+        default:
+            statusButtons = "";
+    }
+
+    let publicizeHtml = "";
+    const currentUserRoleSnap = await db.ref("users/" + r.reporter + "/role").get();
+    const currentUserRole = currentUserRoleSnap.exists() ? currentUserRoleSnap.val() : "user";
+    if (currentUserRole === "admin") {
+        publicizeHtml = `<button class="btn purple" data-action="publicize" data-id="${reportId}">Publicize</button>`;
+    }
+
+    const statusHtml = `
+        <div style="font-size:12px; color:#555; margin-bottom:6px;">
+            <strong>Reported:</strong><br>
+            ${reportTimestamp}
+        </div>
+        ${getStatusBadge(r.status)}<br>
+        ${statusButtons}<br>
+        ${publicizeHtml}
+    `;
+
+    const imageHtml = imageUrl ? `<img src="${imageUrl}" alt="Attachment">` : `<span>No Image</span>`;
+
+    const row = `
+        <tr>
+            <td>
+                <span class="reporter-name"
+                      data-id="${r.reporter}"
+                      data-timestamp="${reportTimestamp}"
+                      data-emergency="${emergency}"
+                      data-description="${description}"
+                      data-location-text="${locationText}"
+                      data-lat="${lat}"
+                      data-lng="${lng}"
+                      data-image="${imageUrl}"
+                      style="cursor:pointer; color:#3498db; text-decoration:underline;">
+                    ${name}
+                </span>
+            </td>
+            <td>${emergency}</td>
+            <td>${description}</td>
+            <td>${imageHtml}</td>
+            <td>${contact}</td>
+            <td>${lat && lng ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">${locationText}</a>` : locationText}</td>
+            <td>${statusHtml}</td>
+        </tr>
+    `;
+    reportsTableBody.insertAdjacentHTML("afterbegin", row);
+};
