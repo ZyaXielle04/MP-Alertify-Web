@@ -21,16 +21,14 @@ app = Flask(
 # ---------------------------
 # Initialize Firebase Admin
 # ---------------------------
-cred = credentials.Certificate("firebase-admin.json")
+cred_json = os.environ.get("FIREBASE_ADMIN_JSON")
+cred = credentials.Certificate(json.loads(cred_json))
 
 firebase_admin.initialize_app(cred, {
     "databaseURL": "https://mp-alertify-default-rtdb.asia-southeast1.firebasedatabase.app/"
 })
 
-# Load raw JSON for FCM HTTP v1
-with open("firebase-admin.json", "r", encoding="utf-8") as f:
-    service_account_info = json.load(f)
-
+service_account_info = json.loads(cred_json)
 PROJECT_ID = service_account_info["project_id"]
 
 # ======================================================
